@@ -1,0 +1,24 @@
+name: Scheduled ROCK build
+
+on: 
+  push:
+    branches:
+      - main
+      # replace by schedule below, once the scanning 
+      # script is in place
+      # otherwise it will start running periodically
+      # and do nothing
+  # schedule:
+  #   - cron: "*/30 * * * *"
+
+jobs:
+  scan-existing-rocks:
+    # goes through all branches/tags and assesses whether a new base is available
+    name: "Check existing ROCKs for upstream updates"
+    runs-on: "ubuntu-latest"
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+
