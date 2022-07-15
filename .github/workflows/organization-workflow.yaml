@@ -1,0 +1,19 @@
+name: ROCKs Organization Workflow
+
+on:
+  repository_dispatch:
+    types: [org-workflow-bot]
+
+jobs:
+  send-report-to-rock:
+    if: ${{ !github.event.client_payload.passed }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register the build in the original commit
+        uses: SvanBoxel/organization-workflow@main
+        with:
+          id: ${{ github.event.client_payload.id }}
+          callback_url: ${{ github.event.client_payload.callback_url }}
+          sha: ${{ github.event.client_payload.sha }}
+          run_id: ${{ github.run_id }}
+          name: ${{ github.workflow }}
