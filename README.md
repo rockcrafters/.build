@@ -54,6 +54,7 @@ a GitHub App.
 What kind of GitHub App do we need for this repository to function as intended?
 
 The GitHub App must:
+
  1. trigger a workflow in this build repository, whenever an event of interest takes place 
  anywhere in the organization
     1. an event of interest can be:
@@ -63,7 +64,6 @@ The GitHub App must:
         - etc.
 
  2. allow to, via configuration, select repositories which are not to be watched (like this one)
- 
 
 ### GitHub App configuration
 
@@ -73,6 +73,7 @@ Please note that the following steps have already been performed in this organiz
 and are here listed for reproducibility purposes only.
 
 **As an admin of [ubuntu-rocks](https://github.com/ubuntu-rocks)**, you need to:
+
  1. make sure the desired GitHub App exists
     - at the moment, we are using an existing [Probot](https://github.com/probot/probot) 
     app named [Organization Workflows](https://probot.github.io/apps/organization-workflows/). 
@@ -90,7 +91,8 @@ the workflow triggers, and which repositories are excluded from the app watchlis
  1. make sure the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization as a [.github](https://github.com/ubuntu-rocks/.github) repository
  2. create a file named `organization-workflows-settings.yml` at the root of the 
  [.github](https://github.com/ubuntu-rocks/.github) repository, with the following content:
-    ```
+
+    ```yaml
     workflows_repository: .build
 
     include_workflows_repository: false
@@ -100,6 +102,7 @@ the workflow triggers, and which repositories are excluded from the app watchlis
       - '.github'
       - 'rocks-pipelines'
     ```
+
     This is basically to say that: 
      - we want to trigger organization workflows in the [.build](https://github.com/ubuntu-rocks/.build) 
      repository (this one)
@@ -115,38 +118,22 @@ App.
  1. in this [.build](https://github.com/ubuntu-rocks/.build) repository, create a 
  GitHub workflow file (under the `.github/workflows` folder - let's call it 
  `organization-workflow.yaml`), with the following content:
-    ```
+
+    ```yaml
     name: ROCKs Organization Workflow
 
     on:
-    repository_dispatch:
+      repository_dispatch:
         types: [org-workflow-bot]
 
     jobs:
     # JOBS: Jobs to be triggered here
     ```
-    With the jobs being whatever the CI/CD should run, whenever there's an event 
-    of interest anywhere within [ubuntu-rocks](https://github.com/ubuntu-rocks) 
-    (except in the excluded repositories from the previous section). See how it is 
-    currently in [this repository](https://github.com/ubuntu-rocks/.build/blob/main/.github/workflows/organization-workflow.yaml).
- 2. finally, let's make sure that this workflow, whenever triggered, can report 
- back to the original commit (in the ROCK repository) which caused the organization 
- workflow to run. For this, we should add the following `job`, as the last one to be 
- executed in our CI/CD pipeline (could be in the `organization-workflow.yaml` file, 
- or any other workflow file if the CI/CD is reusing other workflows within the same run):
-    ```
-    send-report-to-rock:
-       if: ${{ !github.event.client_payload.passed }}
-       runs-on: ubuntu-latest
-       steps:
-       - name: Register the build in the original commit
-         uses: SvanBoxel/organization-workflow@main
-         with:
-           id: ${{ github.event.client_payload.id }}
-           callback_url: ${{ github.event.client_payload.callback_url }}
-           sha: ${{ github.event.client_payload.sha }}
-           run_id: ${{ github.run_id }}
-           name: ${{ github.workflow }}
-    ```
-    More details about this action can be found [here](https://github.com/SvanBoxel/organization-workflows#action-inputs).
 
+    With the jobs being whatever the CI/CD should run, whenever there's an event
+    of interest anywhere within [ubuntu-rocks](https://github.com/ubuntu-rocks) 
+    (except in the excluded repositories from the previous section). See how it is
+    currently in [this repository](https://github.com/ubuntu-rocks/.build/blob/main/.github/workflows/organization-workflow.yaml).
+   
+NOTE: it is this workflow's responsibility to make sure the original ROCK's commit is "[checked](https://docs.github.com/en/rest/checks/runs)".
+By checking each run, we allow all ROCKs' commits to be traceable to their corresponding build. 
