@@ -1,8 +1,16 @@
 name: ROCKs Organization Workflow
 
 on:
+  push:
+    branches:    
+      - trunk
   repository_dispatch:
     types: [org-workflow-bot]
 
+env:
+  TOKEN: "${{ github.ref_name == 'trunk' && github.token || github.event.client_payload.token }}"
+  SHA: "${{ github.ref_name == 'trunk' && github.sha || github.event.client_payload.sha }}"
+  REPOSITORY: "${{ github.ref_name == 'trunk' && github.repository || github.event.client_payload.repository.full_name }}"
+  
 jobs:
 

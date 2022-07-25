@@ -1,0 +1,4 @@
+[submodule "mock-rock"]
+	path = mock-rock
+	url = git@github.com:ubuntu-rocks/mock-rock
+	branch = channels/1.0/edge
