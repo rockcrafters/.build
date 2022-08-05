@@ -1,0 +1,71 @@
+name: Trigger new builds for updated ROCKS
+
+on:
+  schedule:
+    - cron: "*/2 * * * *"
+
+jobs:
+  check-for-updated-rock-projects:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    outputs:
+      triggers: ${{ steps.generate-build-matrix.outputs.triggers }}
+      queue: ${{ steps.generate-build-matrix.outputs.queue }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      # Fetch GH App token for performing org operation during the pipeline
+      - name: Get token for Organization Workflow
+        id: get_token
+        uses: machine-learning-apps/actions-app-token@master
+        with:
+          APP_PEM: ${{ secrets.APP_PEM }}
+          APP_ID: ${{ secrets.APP_ID }}
+      - name: Generate matrix
+        id: generate-build-matrix
+        run: |
+          pip install -r requirements.txt
+          # Set defaults for outputs
+          echo "::set-output name=triggers::[]"
+          echo "::set-output name=queue::[]"
+          ./check-for-updated-rock-projects-dev.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}" # TODO: remove -dev
+
+  build-rocks:
+    needs: check-for-updated-rock-projects
+    if: needs.check-for-updated-rock-projects.outputs.triggers != '[]'
+    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@main
+    with:
+      matrix_combinations: ${{ needs.check-for-updated-rock-projects.outputs.triggers }}
+    secrets: inherit
+
+  queue-rocks:
+    needs: check-for-updated-rock-projects
+    if: needs.check-for-updated-rock-projects.outputs.queue != '[]'
+    name: Put ROCKs on build queue
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        rock: ${{ fromJSON(needs.check-for-updated-rock-projects.outputs.queue) }}
+    steps:
+      # Fetch GH App token for performing org operation during the pipeline
+      - name: Get token for Organization Workflow
+        id: get_token
+        uses: machine-learning-apps/actions-app-token@master
+        with:
+          APP_PEM: ${{ secrets.APP_PEM }}
+          APP_ID: ${{ secrets.APP_ID }}
+      # Announce to the ROCK commit that it is waiting for an existing build to finish
+      - name: ROCK is in build queue
+        uses: LouisBrunner/checks-action@v1.1.1
+        continue-on-error: true 
+        id: checks-queue
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          name: ROCK is in build queue
+          sha: ${{ matrix.rock.sha }}
+          repo: ${{ matrix.rock.full_name }}
+          conclusion: neutral
+          output: |
+            {"summary": "A ROCK build pipeline is currently running. This commit will be take in the next build pipeline execution. If new commits are pushed until then, they'll be all taken into the same ROCK build."}
