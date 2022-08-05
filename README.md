@@ -32,7 +32,7 @@ automate the CI/CD for all ROCKs in the organization.
 
 This repository needs to centrally manage and run CI/CD for multiple repositories 
 across the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization. We could 
-achieve a similar cross-repo CI/CD experience via [Reusable Workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows), [Starter Workflows](https://docs.github.com/en/actions/using-workflows/creating-starter-workflows-for-your-organization), or even 
+achieve a similar cross-repo CI/CD experience via ROCK-specific [Reusable Workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows), [Starter Workflows](https://docs.github.com/en/actions/using-workflows/creating-starter-workflows-for-your-organization), or even 
 [Composite Actions](https://docs.github.com/en/actions/creating-actions/creating-a-composite-action). 
 The problem with these approaches however is that all of them rely on the ROCK repository to 
 define the actual CI/CD workflows. This would break the concept of a standardized 
@@ -53,17 +53,10 @@ a GitHub App.
 
 What kind of GitHub App do we need for this repository to function as intended?
 
-The GitHub App must:
+Any GitHub App would work! The reality is that the most important thing we need from the App, is **the token**! Many GitHub features and API operations (like Checks and Annotated tags) are only available for Apps, so what we need is the App token, with which we are authorized to perform such operations.
 
- 1. trigger a workflow in this build repository, whenever an event of interest takes place 
- anywhere in the organization
-    1. an event of interest can be:
-        - a new branch has been created in a repository
-        - a new commit has been pushed to a branch of a repository
-        - a new tag has been pushed in a repository
-        - etc.
-
- 2. allow to, via configuration, select repositories which are not to be watched (like this one)
+*Optionally*, the GitHub App could also be configured to monitor the entire organization, and upon certain events, trigger a `repository_dispatch` workflow in this repository. This way, the ROCKs would build as soon as there are commits being pushed to any ROCK repository throughout the organization...but this is a CI/CD improvement rather than a requirement. There are existing GitHub Apps that function in a similar way, and that we could use (like the existing [Probot](https://github.com/probot/probot)
+app named [Organization Workflows](https://probot.github.io/apps/organization-workflows/), which is not currently being used in this organization due to reliability and security concerns)
 
 ### GitHub App configuration
 
@@ -72,23 +65,44 @@ Let's break down what needs to be done to enable and configure this GitHub App.
 Please note that the following steps have already been performed in this organization, 
 and are here listed for reproducibility purposes only.
 
-**As an admin of [ubuntu-rocks](https://github.com/ubuntu-rocks)**, you need to:
+Since we only need an App token, all we have to do is to create a mock "GitHub ROCKs App". **As an admin of [ubuntu-rocks](https://github.com/ubuntu-rocks)**, you need to:
 
- 1. make sure the desired GitHub App exists
-    - at the moment, we are using an existing [Probot](https://github.com/probot/probot) 
-    app named [Organization Workflows](https://probot.github.io/apps/organization-workflows/). 
-    - if it exists, and is public, it should be available via the [GitHub Marketplace](https://github.com/marketplace)
- 2. from the [app page](https://github.com/apps/organization-workflows/), click configure
- 3. select the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization
- 4. select "All repositories" (we'll curate this list later on) and ensure the permissions are set to "*Read access to metadata*" and "*Read and write access to actions, administration, checks, code, and issues*"
- 5. click install
+ 1. from the [ubuntu-rocks App settings](https://github.com/organizations/ubuntu-rocks/settings/apps), create a new GitHub App
+ 2. fill in the App's details, making sure that 
+     - "Webhook" is only enabled if there's an actual application running somewhere, behind a webhook, and
+     - at least the following permissions are granted:
+       - Repository:
+         - **Actions:** r/w
+         - **Administration:** r
+         - **Checks:** r/w
+         - **Commit statuses:** r/w
+         - **Contents:** r/w
+         - **Environments:** r
+         - **Issues:** r/w
+         - **Metadata:** r
+         - **Webhooks:** r
+         - **Workflows:** r
+       - Organization:
+         - **Administration:** r
+         - **Events:** r
+         - **Members:** r
+         - **Secrets:** r
+       - User:
+         - **Email addresses:** r
+ 3. click "Create GitHub App", **only on this account** (i.e. the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization)
+ 4. from the newly created App page, click on "Generate private key" (this will download a PEM file), and also copy the "App ID" number
+ 5. go to [this repo's settings](https://github.com/ubuntu-rocks/.build/settings) and navigate to Secrets -> Actions
+ 6. create a "New repository secret" called **APP_ID** and paste the App ID number copied above
+ 7. create a "New repository secret" called **APP_PEM** and paste the *base64 encoded* contents of the PEM file downloaded above (i.e. `cat rocks-token-app.\<date\>.private-key.pem | base64 -w 0 && echo`). Afterwards, you can either securely keep this PEM file or delete it, because we can always generate a new private key for this App if need be
+ 8. these repository variables are then used from within the GitHub workflows, everytime we need to capture the GitHub App token. The retrieval of said token can be done via this GitHub action: <https://github.com/machine-learning-apps/actions-app-token>
 
-#### Steps specific to the [Organization Workflows](https://probot.github.io/apps/organization-workflows/) GitHub App
+### Additional configurations
 
-First, we'll want to instruct the GitHub App about which repository will be receiving 
-the workflow triggers, and which repositories are excluded from the app watchlist (as mentioned above in step 4.).
+There are repositories within the organization that we don't want to scan or build for, since they might be dedicated to something else than a ROCK (e.g. `.github` and `.build` repositories).
 
- 1. make sure the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization as a [.github](https://github.com/ubuntu-rocks/.github) repository
+To create these exclusion rules, let's create a control file in the [organization's `.github` repository](https://github.com/ubuntu-rocks/.github/), called `organization-workflows-settings.yml` (note: this is the same file and syntax that one would use when working with the [Organization Workflows](https://probot.github.io/apps/organization-workflows/) GitHub App)
+
+ 1. make sure the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization has a [.github](https://github.com/ubuntu-rocks/.github) repository
  2. create a file named `organization-workflows-settings.yml` at the root of the 
  [.github](https://github.com/ubuntu-rocks/.github) repository, with the following content:
 
@@ -101,39 +115,8 @@ the workflow triggers, and which repositories are excluded from the app watchlis
       - '.admin'
       - '.github'
       - 'rocks-pipelines'
+      - 'mock-rock'
+      - '.build'
     ```
 
-    This is basically to say that: 
-     - we want to trigger organization workflows in the [.build](https://github.com/ubuntu-rocks/.build) 
-     repository (this one)
-     - we want to exclude the [.build](https://github.com/ubuntu-rocks/.build) repository, 
-     and a few others, from triggering the organization workflows 
-
-#### The repository_dispatch workflow
-
-The final step on the GitHub App configuration is to actually create the GitHub 
-organization workflow which will receive the repository dispatch (trigger) from the 
-App.
-
- 1. in this [.build](https://github.com/ubuntu-rocks/.build) repository, create a 
- GitHub workflow file (under the `.github/workflows` folder - let's call it 
- `organization-workflow.yaml`), with the following content:
-
-    ```yaml
-    name: ROCKs Organization Workflow
-
-    on:
-      repository_dispatch:
-        types: [org-workflow-bot]
-
-    jobs:
-    # JOBS: Jobs to be triggered here
-    ```
-
-    With the jobs being whatever the CI/CD should run, whenever there's an event
-    of interest anywhere within [ubuntu-rocks](https://github.com/ubuntu-rocks) 
-    (except in the excluded repositories from the previous section). See how it is
-    currently in [this repository](https://github.com/ubuntu-rocks/.build/blob/main/.github/workflows/organization-workflow.yaml).
-   
-NOTE: it is this workflow's responsibility to make sure the original ROCK's commit is "[checked](https://docs.github.com/en/rest/checks/runs)".
-By checking each run, we allow all ROCKs' commits to be traceable to their corresponding build. 
+And that's it...the organization CI/CD workflows will not try to build any ROCKs for those repositories.
