@@ -1,3 +1,7 @@
+[![Trigger new builds for updated ROCKS](https://github.com/ubuntu-rocks/.build/actions/workflows/trigger-rock-build-on-changes.yml/badge.svg?branch=main)](https://github.com/ubuntu-rocks/.build/actions/workflows/trigger-rock-build-on-changes.yml)
+
+---
+
 # ROCKs' Builder: one CI/CD for all ROCKs
 
 Building all the ROCKS from [ubuntu-rocks](https://github.com/ubuntu-rocks), in one place.
