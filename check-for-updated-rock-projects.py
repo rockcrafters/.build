@@ -20,10 +20,11 @@ def get_all_pages(url: str, headers: dict, params: dict) -> list:
     objects = []
     while True:
         params["page"] = page_num
-        page_objs = requests.get(url, headers=headers, params=params).json()
-        objects += page_objs
+        page_objs = requests.get(url, headers=headers, params=params)
+        page_objs.raise_for_status()
+        objects += page_objs.json()
         
-        if len(page_objs) == 100:
+        if len(page_objs.json()) == 100:
             page_num += 1
         else:
             break
