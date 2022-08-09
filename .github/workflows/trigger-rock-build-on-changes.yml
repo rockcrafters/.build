@@ -30,7 +30,7 @@ jobs:
           # Set defaults for outputs
           echo "::set-output name=triggers::[]"
           echo "::set-output name=queue::[]"
-          ./check-for-updated-rock-projects-dev.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}" # TODO: remove -dev
+          ./check-for-updated-rock-projects.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
 
   build-rocks:
     needs: check-for-updated-rock-projects
