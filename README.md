@@ -91,10 +91,11 @@ Since we only need an App token, all we have to do is to create a mock "GitHub R
          - **Email addresses:** r
  3. click "Create GitHub App", **only on this account** (i.e. the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization)
  4. from the newly created App page, click on "Generate private key" (this will download a PEM file), and also copy the "App ID" number
- 5. go to [this repo's settings](https://github.com/ubuntu-rocks/.build/settings) and navigate to Secrets -> Actions
- 6. create a "New repository secret" called **APP_ID** and paste the App ID number copied above
- 7. create a "New repository secret" called **APP_PEM** and paste the *base64 encoded* contents of the PEM file downloaded above (i.e. `cat rocks-token-app.\<date\>.private-key.pem | base64 -w 0 && echo`). Afterwards, you can either securely keep this PEM file or delete it, because we can always generate a new private key for this App if need be
- 8. these repository variables are then used from within the GitHub workflows, everytime we need to capture the GitHub App token. The retrieval of said token can be done via this GitHub action: <https://github.com/machine-learning-apps/actions-app-token>
+ 5. from the GitHub App's settings page, install the App into the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization, for all repositories
+ 6. go to [this repo's settings](https://github.com/ubuntu-rocks/.build/settings) and navigate to Secrets -> Actions
+ 7. create a "New repository secret" called **APP_ID** and paste the App ID number copied above
+ 8. create a "New repository secret" called **APP_PEM** and paste the *base64 encoded* contents of the PEM file downloaded above (i.e. `cat rocks-token-app.\<date\>.private-key.pem | base64 -w 0 && echo`). Afterwards, you can either securely keep this PEM file or delete it, because we can always generate a new private key for this App if need be
+ 9. these repository variables are then used from within the GitHub workflows, everytime we need to capture the GitHub App token. The retrieval of said token can be done via this GitHub action: <https://github.com/machine-learning-apps/actions-app-token>
 
 ### Additional configurations
 
