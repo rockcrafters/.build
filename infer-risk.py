@@ -6,7 +6,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Infer the build 'risk' from a channel name."
     )
-    parser.add_argument("--channel", dest="channel", required=True, help="channel name")
+    parser.add_argument("--channel", required=True, help="channel name")
     args = parser.parse_args()
 
     branch = args.channel
