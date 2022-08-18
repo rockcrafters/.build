@@ -36,7 +36,7 @@ jobs:
           then
             ./check-for-updated-rock-projects.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
           else
-            ./check-for-updated-rock-projects.py --on-repo ubuntu-rocks/mock-rock --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
+            ./check-for-updated-rock-projects.py --on-repo mock-rock --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
           fi
 
   build-rocks:

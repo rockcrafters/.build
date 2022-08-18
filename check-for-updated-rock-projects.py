@@ -53,7 +53,7 @@ if __name__ == "__main__":
         "--on-repo",
         dest="on_repo",
         default=None,
-        help="if provided (as <user>/<repo>), it will only check that repository for updates",
+        help="if provided, as <repo> (with the org name), it will only check that repository for updates",
     )
     args = parser.parse_args()
 
