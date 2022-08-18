@@ -2,12 +2,14 @@ name: Trigger new builds for updated ROCKS
 
 on:
   schedule:
-    - cron: "*/2 * * * *"
+    - cron: "*/5 * * * *"
+  push:
+    branches:
+      - trunk
 
 jobs:
   check-for-updated-rock-projects:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'main'
     outputs:
       triggers: ${{ steps.generate-build-matrix.outputs.triggers }}
       queue: ${{ steps.generate-build-matrix.outputs.queue }}
@@ -30,7 +32,12 @@ jobs:
           # Set defaults for outputs
           echo "::set-output name=triggers::[]"
           echo "::set-output name=queue::[]"
-          ./check-for-updated-rock-projects.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
+          if [ "${{ github.ref_name }}" == "main" ]
+          then
+            ./check-for-updated-rock-projects.py --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
+          else
+            ./check-for-updated-rock-projects.py --on-repo ubuntu-rocks/mock-rock --token ${{ steps.get_token.outputs.app_token }} --workflow "${{ github.workflow }}"
+          fi
 
   build-rocks:
     needs: check-for-updated-rock-projects
@@ -38,6 +45,7 @@ jobs:
     uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@main
     with:
       matrix_combinations: ${{ needs.check-for-updated-rock-projects.outputs.triggers }}
+      is_production: ${{ github.ref_name == 'main' && true || false }}
     secrets: inherit
 
   queue-rocks:

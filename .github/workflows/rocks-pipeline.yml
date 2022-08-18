@@ -3,6 +3,11 @@ name: ROCKs Organization Workflow
 on:
   workflow_call:
     inputs:
+      is_production:
+        description: "Is the pipeline is running for a production ROCK?"
+        default: true
+        required: false
+        type: boolean
       # Expects a list of combinations, referring to all the ROCKs to be built
       # This value is later on given to a "matrix"
       # The expected format is:
@@ -264,19 +269,31 @@ jobs:
       - name: Tag and Publish
         id: tag-and-publish
         env:
-          DOCKER_HUB_CREDS_PSW: ${{ secrets.DOCKER_HUB_CREDS_PSW }}
-          DOCKER_HUB_CREDS_USR: ${{ secrets.DOCKER_HUB_CREDS_USR }}
-          ACR_CREDS_USR: ${{ secrets.ACR_CREDS_USR }}
-          ACR_CREDS_PSW: ${{ secrets.ACR_CREDS_PSW }}
-          ECR_CREDS_USR: ${{ secrets.ECR_CREDS_USR }}
-          ECR_CREDS_PSW: ${{ secrets.ECR_CREDS_PSW }}
-          ECR_LTS_CREDS_USR: ${{ secrets.ECR_LTS_CREDS_USR }}
-          ECR_LTS_CREDS_PSW: ${{ secrets.ECR_LTS_CREDS_PSW }}
+          DOCKER_HUB_CREDS_PSW: ${{ inputs.is_production && secrets.DOCKER_HUB_CREDS_PSW || secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
+          DOCKER_HUB_CREDS_USR: ${{ inputs.is_production && secrets.DOCKER_HUB_CREDS_USR || secrets.STAGING_DOCKER_HUB_CREDS_USR }}
+          ACR_CREDS_USR: ${{ inputs.is_production && secrets.ACR_CREDS_USR || secrets.STAGING_ACR_CREDS_USR }}
+          ACR_CREDS_PSW: ${{ inputs.is_production && secrets.ACR_CREDS_PSW || secrets.STAGING_ACR_CREDS_PSW }}
+          ECR_CREDS_USR: ${{ inputs.is_production && secrets.ECR_CREDS_USR || secrets.STAGING_ECR_CREDS_USR }}
+          ECR_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_CREDS_PSW || secrets.STAGING_ECR_CREDS_PSW }}
+          ECR_LTS_CREDS_USR: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_USR || secrets.STAGING_ECR_LTS_CREDS_USR }}
+          ECR_LTS_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_PSW || secrets.STAGING_ECR_LTS_CREDS_PSW }}
+          # STAGING_DOCKER_HUB_CREDS_PSW: ${{ secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
+          # STAGING_DOCKER_HUB_CREDS_USR: ${{ secrets.STAGING_DOCKER_HUB_CREDS_USR }}
+          # STAGING_ACR_CREDS_USR: ${{ secrets.STAGING_ACR_CREDS_USR }}
+          # STAGING_ACR_CREDS_PSW: ${{ secrets.STAGING_ACR_CREDS_PSW }}
+          # STAGING_ECR_CREDS_USR: ${{ secrets.STAGING_ECR_CREDS_USR }}
+          # STAGING_ECR_CREDS_PSW: ${{ secrets.STAGING_ECR_CREDS_PSW }}
+          # STAGING_ECR_LTS_CREDS_USR: ${{ secrets.STAGING_ECR_LTS_CREDS_USR }}
+          # STAGING_ECR_LTS_CREDS_PSW: ${{ secrets.STAGING_ECR_LTS_CREDS_PSW }}
           
-          ACR_NAMESPACE: ubuntu.azurecr.io 
-          DOCKER_HUB_NAMESPACE: docker.io/ubuntu 
-          ECR_NAMESPACE: ubuntu
-          ECR_LTS_NAMESPACE: lts
+          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
+          DOCKER_HUB_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+          ECR_NAMESPACE: ${{ inputs.is_production && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
+          ECR_LTS_NAMESPACE: ${{ inputs.is_production && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
+          # STAGING_ACR_NAMESPACE: ${{ secrets.STAGING_ACR_NAMESPACE }}
+          # STAGING_DOCKER_HUB_NAMESPACE: ${{ secrets.STAGING_DOCKER_HUB_NAMESPACE }} 
+          # STAGING_ECR_NAMESPACE: ${{ secrets.STAGING_ECR_NAMESPACE }}
+          # STAGING_ECR_LTS_NAMESPACE: ${{ secrets.STAGING_ECR_LTS_NAMESPACE }}
         run: |
           set -eux
           published=()
