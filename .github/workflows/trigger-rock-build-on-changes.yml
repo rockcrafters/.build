@@ -42,7 +42,7 @@ jobs:
   build-rocks:
     needs: check-for-updated-rock-projects
     if: needs.check-for-updated-rock-projects.outputs.triggers != '[]'
-    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@main
+    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@${{ github.ref_name }}
     with:
       matrix_combinations: ${{ needs.check-for-updated-rock-projects.outputs.triggers }}
       is_production: ${{ github.ref_name == 'main' && true || false }}
