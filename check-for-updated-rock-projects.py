@@ -69,7 +69,7 @@ if __name__ == "__main__":
         exclude_repos = []
         # Get all the ROCK projects
         url = f"{GIT_API_URL}/repos/{ORG}/{args.on_repo}"
-        rocks_projects = [requests.get(url, headers, {}).json()]
+        rocks_projects = [requests.get(url, headers=headers, params={}).json()]
     else:
         # Get which repos are to be excluded from this check
         url = f"{GIT_API_URL}/repos/{ORG}/.github/contents/organization-workflows-settings.yml"
