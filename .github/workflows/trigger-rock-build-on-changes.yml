@@ -41,11 +41,19 @@ jobs:
 
   build-rocks:
     needs: check-for-updated-rock-projects
-    if: needs.check-for-updated-rock-projects.outputs.triggers != '[]'
-    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@${{ github.ref_name }}
+    if: needs.check-for-updated-rock-projects.outputs.triggers != '[]' && github.ref_name == 'main'
+    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@main
     with:
       matrix_combinations: ${{ needs.check-for-updated-rock-projects.outputs.triggers }}
-      is_production: ${{ github.ref_name == 'main' && true || false }}
+    secrets: inherit
+
+  build-trunk-rocks:
+    needs: check-for-updated-rock-projects
+    if: needs.check-for-updated-rock-projects.outputs.triggers != '[]' && github.ref_name != 'main'
+    uses: ubuntu-rocks/.build/.github/workflows/rocks-pipeline.yml@trunk
+    with:
+      matrix_combinations: ${{ needs.check-for-updated-rock-projects.outputs.triggers }}
+      is_production: ${{ false }}
     secrets: inherit
 
   queue-rocks:
