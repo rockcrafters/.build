@@ -288,7 +288,7 @@ jobs:
           # STAGING_ECR_LTS_CREDS_USR: ${{ secrets.STAGING_ECR_LTS_CREDS_USR }}
           # STAGING_ECR_LTS_CREDS_PSW: ${{ secrets.STAGING_ECR_LTS_CREDS_PSW }}
           
-          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || 'rocksdev.azurecr.io' }}
+          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
           DOCKER_HUB_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
           ECR_NAMESPACE: ${{ inputs.is_production && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
           ECR_LTS_NAMESPACE: ${{ inputs.is_production && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
@@ -370,41 +370,41 @@ jobs:
           output: |
             {"summary": "The CI/CD pipeline for the ${{ matrix.rock.full_name }} ROCKs project, on commit ${{ matrix.rock.sha }} of branch ${{ matrix.rock.branch }} has finished with '${{ job.status }}'. You can view the build logs at ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}"}
       # Create announcement issue with build report
-      - name: Notify via issue
-        uses: maxkomarychev/oction-create-issue@v0.7.1
-        id: announcement-issue
-        if: always()
-        with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
-          repo: ${{ matrix.rock.name }}
-          body: |
-            Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
+      # - name: Notify via issue
+      #   uses: maxkomarychev/oction-create-issue@v0.7.1
+      #   id: announcement-issue
+      #   if: always()
+      #   with:
+      #     token: ${{ steps.get_token.outputs.app_token }}
+      #     title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
+      #     repo: ${{ matrix.rock.name }}
+      #     body: |
+      #       Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
 
-            ## Build report
+      #       ## Build report
 
-            Status: ${{ job.status }}
-            ROCK project: [${{ matrix.rock.name }}](${{ github.server_url }}/${{ matrix.rock.full_name }})
-            Source branch: ${{ matrix.rock.full_name }}
-            Source commit: ${{ matrix.rock.sha }}
+      #       Status: ${{ job.status }}
+      #       ROCK project: [${{ matrix.rock.name }}](${{ github.server_url }}/${{ matrix.rock.full_name }})
+      #       Source branch: ${{ matrix.rock.full_name }}
+      #       Source commit: ${{ matrix.rock.sha }}
 
-            ---
+      #       ---
             
-            Published ROCKs: ${{ steps.tag-and-publish.outputs.published }}
-            Git tags: ${{ steps.git-tags.outputs.git-tags }}
+      #       Published ROCKs: ${{ steps.tag-and-publish.outputs.published }}
+      #       Git tags: ${{ steps.git-tags.outputs.git-tags }}
             
-            ---
-            Build logs: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-          labels: announcement
-      # Lock the announcement issue
-      - name: Lock announcement issue
-        if: ${{ success() }}
-        uses: maxkomarychev/oction-lock-issue@v0.7.1
-        with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          issue_number: ${{ steps.announcement-issue.outputs.number }}
-          repo: ${{ matrix.rock.name }}
-          lock_reason: resolved
+      #       ---
+      #       Build logs: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
+      #     labels: announcement
+      # # Lock the announcement issue
+      # - name: Lock announcement issue
+      #   if: ${{ success() }}
+      #   uses: maxkomarychev/oction-lock-issue@v0.7.1
+      #   with:
+      #     token: ${{ steps.get_token.outputs.app_token }}
+      #     issue_number: ${{ steps.announcement-issue.outputs.number }}
+      #     repo: ${{ matrix.rock.name }}
+      #     lock_reason: resolved
   # notify might be hard, cause we need to get the aggregated status of the matrix job
   # so it's not just a single status
   # notify:
