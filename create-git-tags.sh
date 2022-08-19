@@ -10,9 +10,8 @@
 token="$1"
 marked_for_publishing="$2"
 branch="$3"
-risk="$4"
-rock_repository="$5"
-rock_commit="$6"
+rock_repository="$4"
+rock_commit="$5"
 
 # Move to rock repo and create tag
 pushd $ROCK_PROJECT_CHECKOUT_LOCATION
@@ -30,7 +29,7 @@ do
     rock_revision="$(echo $rock | cut -d ',' -f 6)"
     oci_tags="$(echo $rock | cut -d ',' -f 7)"
 
-    tag_name="${tag_prefix}/${rock_version}/${rock_name}/${rock_base}/${rock_revision}/${risk}"
+    tag_name="${tag_prefix}/${rock_version}/${rock_name}/${rock_base}/${rock_revision}"
 
     git tag -a \
         -m "New revision ${rock_revision} of ${rock_name} ${rock_version} created (OCI tags: ${oci_tags})" \

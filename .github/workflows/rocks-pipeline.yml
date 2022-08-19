@@ -135,26 +135,26 @@ jobs:
           output: |
             {"summary": "Preflight checks have completed with ${{ steps.preflight-checks.outcome }}"}
 
-      ################################
-      ### INFER RISK
-      ################################
-      # Get the risk for this ROCK
-      - name: Infer risk
-        id: infer-risk
-        run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
-      # Announce the inferred risk
-      - name: Report the inferred risk
-        uses: LouisBrunner/checks-action@v1.1.1
-        continue-on-error: true
-        with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
-          sha: ${{ matrix.rock.sha }}
-          repo: ${{ matrix.rock.full_name }}
-          conclusion: success
-          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-          output: |
-            {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
+      # ################################
+      # ### INFER RISK
+      # ################################
+      # # Get the risk for this ROCK
+      # - name: Infer risk
+      #   id: infer-risk
+      #   run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
+      # # Announce the inferred risk
+      # - name: Report the inferred risk
+      #   uses: LouisBrunner/checks-action@v1.1.1
+      #   continue-on-error: true
+      #   with:
+      #     token: ${{ steps.get_token.outputs.app_token }}
+      #     name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
+      #     sha: ${{ matrix.rock.sha }}
+      #     repo: ${{ matrix.rock.full_name }}
+      #     conclusion: success
+      #     details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
+      #     output: |
+      #       {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
 
       ################################
       ### DETERMINE REVISION NUMBER
@@ -162,6 +162,8 @@ jobs:
       # Get the next revision number for all ROCKs in this project
       - name: Determine ROCKs revision numbers
         id: determine-revisions
+        env:
+          LOOKUP_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
         run: |
           set -eux
           ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Determine-Revisions.py --project-dir "${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}"
@@ -196,7 +198,7 @@ jobs:
           docker buildx create --use
           for rockcraft_yaml in `ls ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}/rockcraft.*.y[[:alnum:]]ml`
           do
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Build.py --rockcraft-yaml "${rockcraft_yaml}" --risk ${{ steps.infer-risk.outputs.risk }}
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Build.py --rockcraft-yaml "${rockcraft_yaml}"
           done
           echo "::set-output name=oci-archives::$(ls ${{ env.BUILD_OUTPUTS }}/*.rock | sed -z 's/\n/ /g')"
           echo "::set-output name=marked-for-publishing::${{ env.BUILD_OUTPUTS }}/mark_for_publishing"
@@ -334,7 +336,6 @@ jobs:
             ${{ steps.get_token.outputs.app_token }} \
             ${{ steps.build-rocks.outputs.marked-for-publishing }} \
             ${{ matrix.rock.branch }} \
-            ${{ steps.infer-risk.outputs.risk }} \
             ${{ matrix.rock.full_name }} \
             ${{ matrix.rock.sha }}
       # Announce the Git tags have been created
@@ -378,7 +379,7 @@ jobs:
           title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
           repo: ${{ matrix.rock.name }}
           body: |
-            Just finished the CI/CD pipelines for ROCK project ${{ matrix.rock.name }}.
+            Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
 
             ## Build report
 
