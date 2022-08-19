@@ -288,7 +288,7 @@ jobs:
           # STAGING_ECR_LTS_CREDS_USR: ${{ secrets.STAGING_ECR_LTS_CREDS_USR }}
           # STAGING_ECR_LTS_CREDS_PSW: ${{ secrets.STAGING_ECR_LTS_CREDS_PSW }}
           
-          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
+          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || 'rocksdev.azurecr.io' }}
           DOCKER_HUB_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
           ECR_NAMESPACE: ${{ inputs.is_production && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
           ECR_LTS_NAMESPACE: ${{ inputs.is_production && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
