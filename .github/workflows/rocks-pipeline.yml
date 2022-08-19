@@ -327,35 +327,6 @@ jobs:
             {"summary": "Created a new Git tag for each build: ${{ steps.git-tags.outputs.build-tags }}.\n Corresponding release tags (if any): ${{ steps.git-tags.outputs.release-tags }}"}
 
       ################################
-      ### HANDLE RISK
-      ################################
-      
-      # Create "release" tag for promoting ROCK to <track>/<risk>
-      - name: Release ROCK onto <track>/<risk>
-        if: "${{ steps.infer-risk.outputs.risk != '' }}"
-        id: release
-        run: |
-          ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/release-rock.sh \
-            ${{ steps.get_token.outputs.app_token }} \
-            ${{ steps.build-rocks.outputs.marked-for-publishing }} \
-            ${{ matrix.rock.branch }} \
-            ${{ matrix.rock.full_name }} \
-            ${{ matrix.rock.sha }}
-      # Announce the inferred risk
-      - name: Report the inferred risk
-        uses: LouisBrunner/checks-action@v1.1.1
-        continue-on-error: true
-        with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
-          sha: ${{ matrix.rock.sha }}
-          repo: ${{ matrix.rock.full_name }}
-          conclusion: success
-          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-          output: |
-            {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
-
-      ################################
       # -----------------------------------------------------
       # Announce to the ROCK commit that a build has finished
       - name: Report the end of the ROCK CI/CD pipeline
@@ -373,41 +344,41 @@ jobs:
           output: |
             {"summary": "The CI/CD pipeline for the ${{ matrix.rock.full_name }} ROCKs project, on commit ${{ matrix.rock.sha }} of branch ${{ matrix.rock.branch }} has finished with '${{ job.status }}'. You can view the build logs at ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}"}
       # Create announcement issue with build report
-      # - name: Notify via issue
-      #   uses: maxkomarychev/oction-create-issue@v0.7.1
-      #   id: announcement-issue
-      #   if: always()
-      #   with:
-      #     token: ${{ steps.get_token.outputs.app_token }}
-      #     title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
-      #     repo: ${{ matrix.rock.name }}
-      #     body: |
-      #       Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
+      - name: Notify via issue
+        uses: maxkomarychev/oction-create-issue@v0.7.1
+        id: announcement-issue
+        if: always()
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
+          repo: ${{ matrix.rock.name }}
+          body: |
+            Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
 
-      #       ## Build report
+            ## Build report
 
-      #       Status: ${{ job.status }}
-      #       ROCK project: [${{ matrix.rock.name }}](${{ github.server_url }}/${{ matrix.rock.full_name }})
-      #       Source branch: ${{ matrix.rock.full_name }}
-      #       Source commit: ${{ matrix.rock.sha }}
+            Status: ${{ job.status }}
+            ROCK project: [${{ matrix.rock.name }}](${{ github.server_url }}/${{ matrix.rock.full_name }})
+            Source branch: ${{ matrix.rock.full_name }}
+            Source commit: ${{ matrix.rock.sha }}
 
-      #       ---
+            ---
             
-      #       Published ROCKs: ${{ steps.tag-and-publish.outputs.published }}
-      #       Git tags: ${{ steps.git-tags.outputs.git-tags }}
+            Published ROCKs: ${{ steps.tag-and-publish.outputs.published }}
+            Git tags: ${{ steps.git-tags.outputs.git-tags }}
             
-      #       ---
-      #       Build logs: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-      #     labels: announcement
-      # # Lock the announcement issue
-      # - name: Lock announcement issue
-      #   if: ${{ success() }}
-      #   uses: maxkomarychev/oction-lock-issue@v0.7.1
-      #   with:
-      #     token: ${{ steps.get_token.outputs.app_token }}
-      #     issue_number: ${{ steps.announcement-issue.outputs.number }}
-      #     repo: ${{ matrix.rock.name }}
-      #     lock_reason: resolved
+            ---
+            Build logs: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
+          labels: announcement
+      # Lock the announcement issue
+      - name: Lock announcement issue
+        if: ${{ success() }}
+        uses: maxkomarychev/oction-lock-issue@v0.7.1
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          issue_number: ${{ steps.announcement-issue.outputs.number }}
+          repo: ${{ matrix.rock.name }}
+          lock_reason: resolved
   # notify might be hard, cause we need to get the aggregated status of the matrix job
   # so it's not just a single status
   # notify:

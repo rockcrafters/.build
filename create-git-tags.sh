@@ -57,4 +57,4 @@ done < "${marked_for_publishing}"
 popd
 
 echo "::set-output name=build-tags::${build_tags[@]}"
-echo "::set-output name=release-tags::${build_tags[@]}"
+echo "::set-output name=release-tags::${release_tags[@]}"
