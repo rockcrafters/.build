@@ -135,27 +135,6 @@ jobs:
           output: |
             {"summary": "Preflight checks have completed with ${{ steps.preflight-checks.outcome }}"}
 
-      # ################################
-      # ### INFER RISK
-      # ################################
-      # # Get the risk for this ROCK
-      # - name: Infer risk
-      #   id: infer-risk
-      #   run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
-      # # Announce the inferred risk
-      # - name: Report the inferred risk
-      #   uses: LouisBrunner/checks-action@v1.1.1
-      #   continue-on-error: true
-      #   with:
-      #     token: ${{ steps.get_token.outputs.app_token }}
-      #     name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
-      #     sha: ${{ matrix.rock.sha }}
-      #     repo: ${{ matrix.rock.full_name }}
-      #     conclusion: success
-      #     details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-      #     output: |
-      #       {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
-
       ################################
       ### DETERMINE REVISION NUMBER
       ################################
@@ -279,23 +258,11 @@ jobs:
           ECR_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_CREDS_PSW || secrets.STAGING_ECR_CREDS_PSW }}
           ECR_LTS_CREDS_USR: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_USR || secrets.STAGING_ECR_LTS_CREDS_USR }}
           ECR_LTS_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_PSW || secrets.STAGING_ECR_LTS_CREDS_PSW }}
-          # STAGING_DOCKER_HUB_CREDS_PSW: ${{ secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
-          # STAGING_DOCKER_HUB_CREDS_USR: ${{ secrets.STAGING_DOCKER_HUB_CREDS_USR }}
-          # STAGING_ACR_CREDS_USR: ${{ secrets.STAGING_ACR_CREDS_USR }}
-          # STAGING_ACR_CREDS_PSW: ${{ secrets.STAGING_ACR_CREDS_PSW }}
-          # STAGING_ECR_CREDS_USR: ${{ secrets.STAGING_ECR_CREDS_USR }}
-          # STAGING_ECR_CREDS_PSW: ${{ secrets.STAGING_ECR_CREDS_PSW }}
-          # STAGING_ECR_LTS_CREDS_USR: ${{ secrets.STAGING_ECR_LTS_CREDS_USR }}
-          # STAGING_ECR_LTS_CREDS_PSW: ${{ secrets.STAGING_ECR_LTS_CREDS_PSW }}
           
           ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
           DOCKER_HUB_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
           ECR_NAMESPACE: ${{ inputs.is_production && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
           ECR_LTS_NAMESPACE: ${{ inputs.is_production && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
-          # STAGING_ACR_NAMESPACE: ${{ secrets.STAGING_ACR_NAMESPACE }}
-          # STAGING_DOCKER_HUB_NAMESPACE: ${{ secrets.STAGING_DOCKER_HUB_NAMESPACE }} 
-          # STAGING_ECR_NAMESPACE: ${{ secrets.STAGING_ECR_NAMESPACE }}
-          # STAGING_ECR_LTS_NAMESPACE: ${{ secrets.STAGING_ECR_LTS_NAMESPACE }}
         run: |
           set -eux
           published=()
@@ -329,6 +296,10 @@ jobs:
       ################################
       ### CREATE GIT TAGS
       ################################
+      # Infer if there is a risk for this ROCK channel
+      - name: Infer risk
+        id: infer-risk
+        run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
       - name: Create Git tags
         id: git-tags
         run: |
@@ -337,7 +308,10 @@ jobs:
             ${{ steps.build-rocks.outputs.marked-for-publishing }} \
             ${{ matrix.rock.branch }} \
             ${{ matrix.rock.full_name }} \
-            ${{ matrix.rock.sha }}
+            ${{ matrix.rock.sha }} \
+            ${{ steps.infer-risk.outputs.track }} \
+            ${{ steps.infer-risk.outputs.risk }} \
+            false
       # Announce the Git tags have been created
       - name: Report that the remote Git tags have been created
         uses: LouisBrunner/checks-action@v1.1.1
@@ -350,7 +324,36 @@ jobs:
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
           output: |
-            {"summary": "Created a new Git tag for each build: ${{ steps.git-tags.outputs.git-tags }}"}
+            {"summary": "Created a new Git tag for each build: ${{ steps.git-tags.outputs.build-tags }}.\n Corresponding release tags (if any): ${{ steps.git-tags.outputs.release-tags }}"}
+
+      ################################
+      ### HANDLE RISK
+      ################################
+      
+      # Create "release" tag for promoting ROCK to <track>/<risk>
+      - name: Release ROCK onto <track>/<risk>
+        if: "${{ steps.infer-risk.outputs.risk != '' }}"
+        id: release
+        run: |
+          ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/release-rock.sh \
+            ${{ steps.get_token.outputs.app_token }} \
+            ${{ steps.build-rocks.outputs.marked-for-publishing }} \
+            ${{ matrix.rock.branch }} \
+            ${{ matrix.rock.full_name }} \
+            ${{ matrix.rock.sha }}
+      # Announce the inferred risk
+      - name: Report the inferred risk
+        uses: LouisBrunner/checks-action@v1.1.1
+        continue-on-error: true
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
+          sha: ${{ matrix.rock.sha }}
+          repo: ${{ matrix.rock.full_name }}
+          conclusion: success
+          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
+          output: |
+            {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
 
       ################################
       # -----------------------------------------------------
