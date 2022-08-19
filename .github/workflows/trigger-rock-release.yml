@@ -11,7 +11,7 @@ jobs:
   check-for-new-release-requests:
     runs-on: ubuntu-latest
     outputs:
-      triggers: ${{ steps.generate-build-matrix.outputs.releases }}
+      releases: ${{ steps.generate-release-matrix.outputs.releases }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -25,7 +25,7 @@ jobs:
           APP_PEM: ${{ secrets.APP_PEM }}
           APP_ID: ${{ secrets.APP_ID }}
       - name: Generate matrix
-        id: generate-build-matrix
+        id: generate-release-matrix
         run: |
           pip install -r requirements.txt
           # Set defaults for outputs
