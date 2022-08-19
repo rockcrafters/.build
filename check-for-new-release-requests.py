@@ -50,7 +50,7 @@ if __name__ == "__main__":
         release_tags = list(
             filter(
                 lambda t: re.match(
-                    r"release/.*/[0-9]+/.*/(edge|beta|candidate|stable)$", t
+                    r"release/.*/[0-9]+/.*/(edge|beta|candidate|stable)$", t["name"]
                 ),
                 all_rock_tags,
             )
