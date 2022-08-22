@@ -43,7 +43,7 @@ cat>gh_release.txt<<EOF
   "body":"$ROCK_NAME is now in $TRACK/$RISK. New OCI tags: $(echo $new_oci_tags | tr " " "\n")",
   "draft":false,
   "prerelease":false,
-  "generate_release_notes":true
+  "generate_release_notes":false
 }
 EOF
 
