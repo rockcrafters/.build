@@ -49,9 +49,11 @@ jobs:
       matrix:
         rock: ${{ fromJSON(needs.check-for-new-release-requests.outputs.releases) }}
     steps:
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: pip install requests
       # (cannot pass secrets from job to job)
       # Fetch GH App token for performing org operation during the pipeline
       - name: Get token for Organization Workflow
@@ -60,6 +62,7 @@ jobs:
         with:
           APP_PEM: ${{ secrets.APP_PEM }}
           APP_ID: ${{ secrets.APP_ID }}
+      
       # Get the corresponding URL of the check_run
       - name: Get check_run ID for project
         if: always()
@@ -154,38 +157,17 @@ jobs:
           DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
           ECR_NAMESPACE: ${{ github.ref_name == 'main' && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
           ECR_LTS_NAMESPACE: ${{ github.ref_name == 'main' && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
-        run: |
-          set -eux
-          new_oci_tags=""
-          for risk in ${{ matrix.rock.all_risks }}
-          do
-            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}-${{ matrix.rock.rock_base }}_${risk}_${{ matrix.rock.revision }}"
-            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}-${{ matrix.rock.rock_base }}_${risk}"
-            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}_${risk}"
-            new_oci_tags="${new_oci_tags} ${risk}"
-            if [ "${risk}" == "stable" ]
-            then 
-              new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}"
-            fi
-          done
-          
-          IS_LTS=0
-          if `ubuntu-distro-info -a -f | grep ${{ matrix.rock.rock_base }} | grep LTS >/dev/null`
-          then
-            IS_LTS=1
-          fi
 
-          # TODO: we are unnecessarily pushing the whole ROCK once more
-          # just because we want to reuse the cpc-build-tools.oci-registry-upload script.
-          # Instead, we just needed to push indexes...so we should refactor the code
-          args="${{ steps.get-oci-archive.outputs.oci-archive }} ${{ matrix.rock.rock_name }} _ _ $IS_LTS ${new_oci_tags}"
-          retry=0
-          ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $args || retry=1
-          if [ $retry -eq 1 ]
-          then
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $args
-            # Sometimes pushes are reset by peer 
-          fi
+          RELEASE_FOR_RISKS: ${{ matrix.rock.all_risks }}
+          TRACK: ${{ matrix.rock.track }}
+          RISK: ${{ matrix.rock.risk }}
+          BASE: ${{ matrix.rock.rock_base }}
+          REVISION: ${{ matrix.rock.revision }}
+          OCI_ARCHIVE: ${{ steps.get-oci-archive.outputs.oci-archive }}
+          ROCK_NAME: ${{ matrix.rock.rock_name }}
+          ROCK_REPO: ${{ matrix.rock.full_name }}  
+          RELEASE_TAG: ${{ matrix.rock.tag }}
+        run: ./oci-re-tag-and-release.sh ${{ steps.get_token.outputs.app_token }}
           
       ################################
       # -----------------------------------------------------
@@ -204,10 +186,3 @@ jobs:
           conclusion: ${{ job.status }}
           output: |
             {"summary": "The release ${{ matrix.rock.tag }} has finished with '${{ job.status }}'. You can view the build logs at ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-release-id }}"}
-
-
-    # # uses: ./.github/workflows/rocks-pipeline.yml
-    # with:
-    #   matrix_combinations: ${{ needs.check-for-new-release-requests.outputs.triggers }}
-    #   is_production: ${{ github.ref_name == 'main' && true || false }}
-    # secrets: inherit
