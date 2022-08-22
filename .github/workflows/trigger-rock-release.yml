@@ -166,6 +166,7 @@ jobs:
           OCI_ARCHIVE: ${{ steps.get-oci-archive.outputs.oci-archive }}
           ROCK_NAME: ${{ matrix.rock.rock_name }}
           ROCK_REPO: ${{ matrix.rock.full_name }}  
+          ROCK_VERSION: ${{ matrix.rock.rock_version }}  
           RELEASE_TAG: ${{ matrix.rock.tag }}
         run: ./oci-re-tag-and-release.sh ${{ steps.get_token.outputs.app_token }}
           

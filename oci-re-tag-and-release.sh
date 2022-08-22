@@ -6,9 +6,9 @@ token="$1"
 new_oci_tags=""
 for risk in $RELEASE_FOR_RISKS
 do
-    new_oci_tags="${new_oci_tags} ${TRACK}-${BASE}_${risk}_$REVISION"
-    new_oci_tags="${new_oci_tags} ${TRACK}-${BASE}_${risk}"
-    new_oci_tags="${new_oci_tags} ${TRACK}_${risk}"
+    new_oci_tags="${new_oci_tags} ${ROCK_VERSION}-${BASE}_${risk}_$REVISION"
+    new_oci_tags="${new_oci_tags} ${ROCK_VERSION}-${BASE}_${risk}"
+    new_oci_tags="${new_oci_tags} ${ROCK_VERSION}_${risk}"
     new_oci_tags="${new_oci_tags} ${risk}"
     if [ "${risk}" == "stable" ]
     then 
