@@ -99,6 +99,12 @@ if __name__ == "__main__":
                     )
                 )
                 continue
+            
+            if corresponding_build_tag[0]["commit"]["sha"] != rtag["commit"]["sha"]:
+                raise Exception(
+                    f"The requested release tag {rtag['name']} does not point to the "
+                    f"same commit as its corresponding build tag {corresponding_build_tag[0]['name']}"
+                )
 
             build_tag_name = corresponding_build_tag[0]["name"]
             rock_name, rock_version, rock_base = build_tag_name.split("/")[-4:-1]
