@@ -71,11 +71,12 @@ jobs:
       - name: Create Git tag
         id: git-tag
         run: |
-          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,${{ inputs.revision }},_" > pub.txt
+          set -eux
+          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,${{ inputs.revision }},_" > $PWD/pub.txt
 
           ./create-git-tags.sh \
             ${{ steps.get_token.outputs.app_token }} \
-            pub.txt \
+            $PWD/pub.txt \
             _ \
             ubuntu-rocks/${{ inputs.rocks-project }} \
             $(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD) \
