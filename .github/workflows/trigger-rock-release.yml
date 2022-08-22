@@ -141,7 +141,19 @@ jobs:
       # Define new tags and release ROCK
       - name: Re-tag and release
         env:
+          DOCKER_HUB_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.DOCKER_HUB_CREDS_PSW || secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
+          DOCKER_HUB_CREDS_USR: ${{ github.ref_name == 'main' && secrets.DOCKER_HUB_CREDS_USR || secrets.STAGING_DOCKER_HUB_CREDS_USR }}
+          ACR_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ACR_CREDS_USR || secrets.STAGING_ACR_CREDS_USR }}
+          ACR_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ACR_CREDS_PSW || secrets.STAGING_ACR_CREDS_PSW }}
+          ECR_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ECR_CREDS_USR || secrets.STAGING_ECR_CREDS_USR }}
+          ECR_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ECR_CREDS_PSW || secrets.STAGING_ECR_CREDS_PSW }}
+          ECR_LTS_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ECR_LTS_CREDS_USR || secrets.STAGING_ECR_LTS_CREDS_USR }}
+          ECR_LTS_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ECR_LTS_CREDS_PSW || secrets.STAGING_ECR_LTS_CREDS_PSW }}
+          
+          ACR_NAMESPACE: ${{ github.ref_name == 'main' && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
           DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+          ECR_NAMESPACE: ${{ github.ref_name == 'main' && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
+          ECR_LTS_NAMESPACE: ${{ github.ref_name == 'main' && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
         run: |
           set -eux
           new_oci_tags=""
