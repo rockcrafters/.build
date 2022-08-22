@@ -7,6 +7,9 @@ on:
     branches:
       - trunk
 
+env:
+  ROCKS_CICD_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-cicd"
+
 jobs:
   check-for-new-release-requests:
     runs-on: ubuntu-latest
@@ -46,6 +49,9 @@ jobs:
       matrix:
         rock: ${{ fromJSON(needs.check-for-new-release-requests.outputs.releases) }}
     steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
       # (cannot pass secrets from job to job)
       # Fetch GH App token for performing org operation during the pipeline
       - name: Get token for Organization Workflow
@@ -89,6 +95,86 @@ jobs:
           output: |
             {"summary": "Releasing ROCK revision ${{ matrix.rock.revision }} for ${{ matrix.rock.name }}, on track ${{ matrix.rock.track }}, for risk ${{ matrix.rock.risk }}"}
 
+      ################################
+      ### PREPARE ENVIRONMENT
+      ################################
+      # Get the ROCK CI/CD pipeline scripts
+      - name: Checkout the ROCK CI/CD pipelines repository
+        uses: actions/checkout@v3
+        with:
+          repository: ubuntu-rocks/rocks-pipelines
+          ref: main
+          token: ${{ steps.get_token.outputs.app_token }}
+          submodules: "recursive"
+          path: ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}
+      # Install requirements for ROCKs CI/CD pipelines
+      - name: Prepare environment to run ROCKs CI/CD pipelines
+        env:
+          ROCKS_DEV_LP_SSH_PRIVATE: ${{ secrets.ROCKS_DEV_LP_SSH_PRIVATE }}
+          ROCKS_DEV_LP_USERNAME: ${{ secrets.ROCKS_DEV_LP_USERNAME }}
+        run: |
+          set -eux
+          ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/requirements.sh
+      
+      ################################
+      ### INTO OCI ARCHIVE
+      ################################
+      # Get the ROCK's canonical tag from Docker Hub into an OCI archive
+      - name: From DH to OCI archive
+        id: get-oci-archive
+        env: 
+          DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+        run: |
+          set -eux
+          rock="${DOCKER_HUB_NAMESPACE}/${{ matrix.rock.rock_name }}:${{ matrix.rock.rock_version }}-${{ matrix.rock.rock_base }}_${{ matrix.rock.revision }}"
+          oci_archive="${{ matrix.rock.rock_name }}_${{ matrix.rock.rock_version }}-${{ matrix.rock.rock_base }}_${{ matrix.rock.revision }}.rock"
+          docker run -w /rock \
+            -v $PWD:/rock \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            quay.io/skopeo/stable:v1.8 copy --multi-arch all --preserve-digests docker://${rock} oci-archive:/rock/${oci_archive}
+          
+          echo "::set-output name=oci-archive::$PWD/${oci_archive}"
+
+      ################################
+      ### RE-TAG
+      ################################
+      # Define new tags and release ROCK
+      - name: Re-tag and release
+        env:
+          DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+        run: |
+          set -eux
+          new_oci_tags=""
+          for risk in ${{ matrix.rock.all_risks }}
+          do
+            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}-${{ matrix.rock.rock_base }}_${risk}_${{ matrix.rock.revision }}"
+            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}-${{ matrix.rock.rock_base }}_${risk}"
+            new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}_${risk}"
+            new_oci_tags="${new_oci_tags} ${risk}"
+            if [ "${risk}" == "stable" ]
+            then 
+              new_oci_tags="${new_oci_tags} ${{ matrix.rock.track }}"
+            fi
+          done
+          
+          IS_LTS=0
+          if `ubuntu-distro-info -a -f | grep ${{ matrix.rock.rock_base }} | grep LTS >/dev/null`
+          then
+            IS_LTS=1
+          fi
+
+          # TODO: we are unnecessarily pushing the whole ROCK once more
+          # just because we want to reuse the cpc-build-tools.oci-registry-upload script.
+          # Instead, we just needed to push indexes...so we should refactor the code
+          args="${{ steps.get-oci-archive.outputs.oci-archive }} ${{ matrix.rock.rock_name }} _ _ $IS_LTS ${new_oci_tags}"
+          retry=0
+          ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $args || retry=1
+          if [ $retry -eq 1 ]
+          then
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $args
+            # Sometimes pushes are reset by peer 
+          fi
+          
       ################################
       # -----------------------------------------------------
       # Announce to the ROCK commit that a build has finished

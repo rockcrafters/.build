@@ -20,7 +20,7 @@ from helper_functions import get_all_pages, check_org_argparse, list_rocks_proje
 
 ORG = "ubuntu-rocks"
 GIT_API_URL = "https://api.github.com"
-
+SUPPORTED_RISKS = ["edge", "beta", "candidate", "stable"]
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -50,7 +50,15 @@ if __name__ == "__main__":
         release_tags = list(
             filter(
                 lambda t: re.match(
-                    r"release/.*/[0-9]+/.*/(edge|beta|candidate|stable)$", t["name"]
+                    rf"release/.*/[0-9]+/.*/({'|'.join(SUPPORTED_RISKS)})$", t["name"]
+                ),
+                all_rock_tags,
+            )
+        )
+        build_tags = list(
+            filter(
+                lambda t: re.match(
+                    r"channels/.*/.*/.*/[0-9][0-9]\.[0-9][0-9]/[0-9]+$", t["name"]
                 ),
                 all_rock_tags,
             )
@@ -58,7 +66,9 @@ if __name__ == "__main__":
 
         for rtag in release_tags:
             # Get GH release (if any) for this tag
-            url = f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/releases/tags/{rtag['name']}"
+            url = (
+                f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/releases/tags/{rtag['name']}"
+            )
             gh_release = requests.get(url, headers=headers)
             try:
                 gh_release.raise_for_status()
@@ -71,7 +81,27 @@ if __name__ == "__main__":
             else:
                 # There is already a GH release for this release tag...move on
                 continue
-            
+
+            revision, track, risk = rtag["name"].split("/")[2:]
+
+            logging.info(
+                f"There is a release request tag {rtag['name']} without a GitHub release"
+            )
+            # Confirm that the corresponding release tag as an associated build tag
+            corresponding_build_tag = [
+                t for t in build_tags if t["name"].endswith(f"/{revision}")
+            ]
+            if not corresponding_build_tag:
+                logging.warning(
+                    (
+                        f"Release request tag {rtag['name']} does not have "
+                        f"a matching build tag with revision number {revision}"
+                    )
+                )
+                continue
+
+            build_tag_name = corresponding_build_tag[0]["name"]
+            rock_name, rock_version, rock_base = build_tag_name.split("/")[-4:-1]
             revision, track, risk = rtag["name"].split("/")[2:]
             new_release_tags.append(
                 {
@@ -81,7 +111,12 @@ if __name__ == "__main__":
                     "tag": rtag["name"],
                     "revision": revision,
                     "track": track,
-                    "risk": risk
+                    "risk": risk,
+                    "all_risks": f"{risk} {' '.join(SUPPORTED_RISKS[:SUPPORTED_RISKS.index(risk)])}",
+                    "build_tag": build_tag_name,
+                    "rock_name": rock_name,
+                    "rock_version": rock_version,
+                    "rock_base": rock_base,
                 }
             )
 

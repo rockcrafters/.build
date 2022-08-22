@@ -31,20 +31,20 @@ if __name__ == "__main__":
     )
 
     new_commits = []
-    for rock in rocks_projects:
-        if rock["name"] in exclude_repos:
+    for project in rocks_projects:
+        if project["name"] in exclude_repos:
             continue
 
-        logging.info(f"Scanning channel branches in {rock['name']} project...")
+        logging.info(f"Scanning channel branches in {project['name']} project...")
         # Get all channel branches
-        url = f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/git/matching-refs/heads/channels/"
-        rock_branches = get_all_pages(url, headers, {})
+        url = f"{GIT_API_URL}/repos/{ORG}/{project['name']}/git/matching-refs/heads/channels/"
+        project_branches = get_all_pages(url, headers, {})
 
         # Git API does not allow searching tags by commit
-        url = f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/tags"
-        all_rock_tags = get_all_pages(url, headers, {})
+        url = f"{GIT_API_URL}/repos/{ORG}/{project['name']}/tags"
+        all_project_tags = get_all_pages(url, headers, {})
 
-        for channel in rock_branches:
+        for channel in project_branches:
             if channel["object"]["type"] != "commit":
                 continue
             channel["name"] = channel["ref"].lstrip("refs/heads")
@@ -52,14 +52,14 @@ if __name__ == "__main__":
             sha = channel["object"]["sha"]
 
             logging.info(
-                f"Latest commit for {rock['name']} on {channel['name']} is {sha}"
+                f"Latest commit for {project['name']} on {channel['name']} is {sha}"
             )
             # Need to find if any of the existing tags
             # for this channel, are for this commit.
             # Expected format: channels/x.y/...
             channel_track = "/".join(channel["name"].split("/")[:2])
             channel_tags = [
-                t for t in all_rock_tags if t["name"].startswith(channel_track)
+                t for t in all_project_tags if t["name"].startswith(channel_track)
             ]
 
             tags_for_commit = [ct for ct in channel_tags if ct["commit"]["sha"] == sha]
@@ -73,8 +73,8 @@ if __name__ == "__main__":
 
                 new_commits.append(
                     {
-                        "full_name": f"{ORG}/{rock['name']}",
-                        "name": rock["name"],
+                        "full_name": f"{ORG}/{project['name']}",
+                        "name": project["name"],
                         "sha": sha,
                         "branch": channel["name"],
                     }

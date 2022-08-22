@@ -47,7 +47,7 @@ do
         # There's a risk in the channel branch, so let's release the ROCK
         release_tag="release/${rock_name}/${rock_revision}/${track}/${risk}"
         git tag -a \
-            -m "Releasing revision ${rock_revision} of ${rock_name} ${rock_version} to ${track}/${risk}" \
+            -m "Release tag for revision ${rock_revision} of ${rock_name} ${rock_version} to ${track}/${risk}" \
             $release_tag $rock_commit
 
         git push upstream-rock $release_tag
