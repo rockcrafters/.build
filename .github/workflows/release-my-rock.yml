@@ -15,6 +15,10 @@ on:
         description: "Revision to release"
         required: true
         type: string
+      track:
+        description: "Release to track"
+        required: true
+        type: string
       risk:
         description: "Release to risk"
         required: true
@@ -25,10 +29,6 @@ on:
           - beta
           - candidate
           - stable
-      track:
-        description: "Release to track"
-        required: true
-        type: string
 
 env:
   ROCK_PROJECT_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-project"
@@ -41,6 +41,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: pip install requests
       # Fetch GH App token for performing org operation during the pipeline
       - name: Get token for Organization Workflow
         id: get_token
