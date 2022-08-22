@@ -72,7 +72,7 @@ jobs:
         id: git-tag
         run: |
           set -eux
-          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,${{ inputs.revision }},_" > $PWD/pub.txt
+          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,_,${{ inputs.revision }},_" > $PWD/pub.txt
 
           ./create-git-tags.sh \
             ${{ steps.get_token.outputs.app_token }} \
@@ -96,5 +96,5 @@ jobs:
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
-            {"summary": "Received a manual request for releasing ${{ inputs.rock }} (revision ${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }}. See the new Git tag ${{ steps.git-tags.outputs.release-tags }}"}
+            {"summary": "Received a manual request for releasing ${{ inputs.rock }} (revision ${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }}. See the new Git tag ${{ steps.git-tag.outputs.release-tags }}"}
 
