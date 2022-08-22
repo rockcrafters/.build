@@ -15,6 +15,10 @@ on:
         description: "Revision to release"
         required: true
         type: string
+      track:
+        description: "Release to track"
+        required: true
+        type: string
       risk:
         description: "Release to risk"
         required: true
@@ -25,10 +29,6 @@ on:
           - beta
           - candidate
           - stable
-      track:
-        description: "Release to track"
-        required: true
-        type: string
 
 env:
   ROCK_PROJECT_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-project"
@@ -41,6 +41,7 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: pip install -r requirements.txt
       # Fetch GH App token for performing org operation during the pipeline
       - name: Get token for Organization Workflow
         id: get_token
@@ -70,11 +71,12 @@ jobs:
       - name: Create Git tag
         id: git-tag
         run: |
-          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,${{ inputs.revision }},_" > pub.txt
+          set -eux
+          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,_,${{ inputs.revision }},_" > $PWD/pub.txt
 
           ./create-git-tags.sh \
             ${{ steps.get_token.outputs.app_token }} \
-            pub.txt \
+            $PWD/pub.txt \
             _ \
             ubuntu-rocks/${{ inputs.rocks-project }} \
             $(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD) \
@@ -94,5 +96,5 @@ jobs:
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
-            {"summary": "Received a manual request for releasing ${{ inputs.rock }} (revision ${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }}. See the new Git tag ${{ steps.git-tags.outputs.release-tags }}"}
+            {"summary": "Received a manual request for releasing ${{ inputs.rock }} (revision ${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }}. See the new Git tag ${{ steps.git-tag.outputs.release-tags }}"}
 

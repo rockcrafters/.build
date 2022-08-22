@@ -3,6 +3,11 @@ name: ROCKs Organization Workflow
 on:
   workflow_call:
     inputs:
+      is_production:
+        description: "Is the pipeline is running for a production ROCK?"
+        default: true
+        required: false
+        type: boolean
       # Expects a list of combinations, referring to all the ROCKs to be built
       # This value is later on given to a "matrix"
       # The expected format is:
@@ -131,32 +136,13 @@ jobs:
             {"summary": "Preflight checks have completed with ${{ steps.preflight-checks.outcome }}"}
 
       ################################
-      ### INFER RISK
-      ################################
-      # Get the risk for this ROCK
-      - name: Infer risk
-        id: infer-risk
-        run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
-      # Announce the inferred risk
-      - name: Report the inferred risk
-        uses: LouisBrunner/checks-action@v1.1.1
-        continue-on-error: true
-        with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          name: Inferred risk = ${{ steps.infer-risk.outputs.risk }}
-          sha: ${{ matrix.rock.sha }}
-          repo: ${{ matrix.rock.full_name }}
-          conclusion: success
-          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
-          output: |
-            {"summary": "Building ROCK for risk '${{ steps.infer-risk.outputs.risk }}' (based on channel name ${{ matrix.rock.branch }})"}
-
-      ################################
       ### DETERMINE REVISION NUMBER
       ################################
       # Get the next revision number for all ROCKs in this project
       - name: Determine ROCKs revision numbers
         id: determine-revisions
+        env:
+          LOOKUP_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
         run: |
           set -eux
           ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Determine-Revisions.py --project-dir "${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}"
@@ -191,7 +177,7 @@ jobs:
           docker buildx create --use
           for rockcraft_yaml in `ls ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}/rockcraft.*.y[[:alnum:]]ml`
           do
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Build.py --rockcraft-yaml "${rockcraft_yaml}" --risk ${{ steps.infer-risk.outputs.risk }}
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Build.py --rockcraft-yaml "${rockcraft_yaml}"
           done
           echo "::set-output name=oci-archives::$(ls ${{ env.BUILD_OUTPUTS }}/*.rock | sed -z 's/\n/ /g')"
           echo "::set-output name=marked-for-publishing::${{ env.BUILD_OUTPUTS }}/mark_for_publishing"
@@ -264,19 +250,19 @@ jobs:
       - name: Tag and Publish
         id: tag-and-publish
         env:
-          DOCKER_HUB_CREDS_PSW: ${{ secrets.DOCKER_HUB_CREDS_PSW }}
-          DOCKER_HUB_CREDS_USR: ${{ secrets.DOCKER_HUB_CREDS_USR }}
-          ACR_CREDS_USR: ${{ secrets.ACR_CREDS_USR }}
-          ACR_CREDS_PSW: ${{ secrets.ACR_CREDS_PSW }}
-          ECR_CREDS_USR: ${{ secrets.ECR_CREDS_USR }}
-          ECR_CREDS_PSW: ${{ secrets.ECR_CREDS_PSW }}
-          ECR_LTS_CREDS_USR: ${{ secrets.ECR_LTS_CREDS_USR }}
-          ECR_LTS_CREDS_PSW: ${{ secrets.ECR_LTS_CREDS_PSW }}
+          DOCKER_HUB_CREDS_PSW: ${{ inputs.is_production && secrets.DOCKER_HUB_CREDS_PSW || secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
+          DOCKER_HUB_CREDS_USR: ${{ inputs.is_production && secrets.DOCKER_HUB_CREDS_USR || secrets.STAGING_DOCKER_HUB_CREDS_USR }}
+          ACR_CREDS_USR: ${{ inputs.is_production && secrets.ACR_CREDS_USR || secrets.STAGING_ACR_CREDS_USR }}
+          ACR_CREDS_PSW: ${{ inputs.is_production && secrets.ACR_CREDS_PSW || secrets.STAGING_ACR_CREDS_PSW }}
+          ECR_CREDS_USR: ${{ inputs.is_production && secrets.ECR_CREDS_USR || secrets.STAGING_ECR_CREDS_USR }}
+          ECR_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_CREDS_PSW || secrets.STAGING_ECR_CREDS_PSW }}
+          ECR_LTS_CREDS_USR: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_USR || secrets.STAGING_ECR_LTS_CREDS_USR }}
+          ECR_LTS_CREDS_PSW: ${{ inputs.is_production && secrets.ECR_LTS_CREDS_PSW || secrets.STAGING_ECR_LTS_CREDS_PSW }}
           
-          ACR_NAMESPACE: ubuntu.azurecr.io 
-          DOCKER_HUB_NAMESPACE: docker.io/ubuntu 
-          ECR_NAMESPACE: ubuntu
-          ECR_LTS_NAMESPACE: lts
+          ACR_NAMESPACE: ${{ inputs.is_production && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
+          DOCKER_HUB_NAMESPACE: ${{ inputs.is_production && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+          ECR_NAMESPACE: ${{ inputs.is_production && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
+          ECR_LTS_NAMESPACE: ${{ inputs.is_production && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
         run: |
           set -eux
           published=()
@@ -310,6 +296,10 @@ jobs:
       ################################
       ### CREATE GIT TAGS
       ################################
+      # Infer if there is a risk for this ROCK channel
+      - name: Infer risk
+        id: infer-risk
+        run: ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/infer-risk.py --channel ${{ matrix.rock.branch }}
       - name: Create Git tags
         id: git-tags
         run: |
@@ -317,9 +307,11 @@ jobs:
             ${{ steps.get_token.outputs.app_token }} \
             ${{ steps.build-rocks.outputs.marked-for-publishing }} \
             ${{ matrix.rock.branch }} \
-            ${{ steps.infer-risk.outputs.risk }} \
             ${{ matrix.rock.full_name }} \
-            ${{ matrix.rock.sha }}
+            ${{ matrix.rock.sha }} \
+            ${{ steps.infer-risk.outputs.track }} \
+            ${{ steps.infer-risk.outputs.risk }} \
+            false
       # Announce the Git tags have been created
       - name: Report that the remote Git tags have been created
         uses: LouisBrunner/checks-action@v1.1.1
@@ -332,7 +324,7 @@ jobs:
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
           output: |
-            {"summary": "Created a new Git tag for each build: ${{ steps.git-tags.outputs.git-tags }}"}
+            {"summary": "Created a new Git tag for each build: ${{ steps.git-tags.outputs.build-tags }}.\n Corresponding release tags (if any): ${{ steps.git-tags.outputs.release-tags }}"}
 
       ################################
       # -----------------------------------------------------
@@ -361,7 +353,7 @@ jobs:
           title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
           repo: ${{ matrix.rock.name }}
           body: |
-            Just finished the CI/CD pipelines for ROCK project ${{ matrix.rock.name }}.
+            Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
 
             ## Build report
 

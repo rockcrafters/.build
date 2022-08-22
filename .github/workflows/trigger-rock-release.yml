@@ -1,0 +1,189 @@
+name: Trigger new releases of ROCKs
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  push:
+    branches:
+      - trunk
+
+env:
+  ROCKS_CICD_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-cicd"
+
+jobs:
+  check-for-new-release-requests:
+    runs-on: ubuntu-latest
+    outputs:
+      releases: ${{ steps.generate-release-matrix.outputs.releases }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      # Fetch GH App token for performing org operation during the pipeline
+      - name: Get token for Organization Workflow
+        id: get_token
+        uses: machine-learning-apps/actions-app-token@master
+        with:
+          APP_PEM: ${{ secrets.APP_PEM }}
+          APP_ID: ${{ secrets.APP_ID }}
+      - name: Generate matrix
+        id: generate-release-matrix
+        run: |
+          pip install -r requirements.txt
+          # Set defaults for outputs
+          echo "::set-output name=releases::[]"
+          if [ "${{ github.ref_name }}" == "main" ]
+          then
+            ./check-for-new-release-requests.py --token ${{ steps.get_token.outputs.app_token }}
+          else
+            ./check-for-new-release-requests.py --on-repo mock-rock --token ${{ steps.get_token.outputs.app_token }}
+          fi
+
+  release-rocks:
+    needs: check-for-new-release-requests
+    if: needs.check-for-new-release-requests.outputs.releases != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJSON(needs.check-for-new-release-requests.outputs.releases) }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - run: pip install requests
+      # (cannot pass secrets from job to job)
+      # Fetch GH App token for performing org operation during the pipeline
+      - name: Get token for Organization Workflow
+        id: get_token
+        uses: machine-learning-apps/actions-app-token@master
+        with:
+          APP_PEM: ${{ secrets.APP_PEM }}
+          APP_ID: ${{ secrets.APP_ID }}
+      
+      # Get the corresponding URL of the check_run
+      - name: Get check_run ID for project
+        if: always()
+        id: check-run-id
+        uses: jannekem/run-python-script-action@v1
+        continue-on-error: true
+        with:
+          script: |
+            import requests
+            import json
+
+            headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"token ${{ github.token }}"
+            }
+            url = "${{ github.api_url }}/repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs"
+            check_runs = requests.get(url, headers=headers, params={"filter": "latest"}).json()
+            for cr in check_runs["check_runs"]:
+              if "${{ matrix.rock.full_name }}" in cr["name"] and "${{ matrix.rock.sha }}"[:12] in cr["name"]:
+                print(f"::set-output name=rock-release-id::{cr['id']}")
+      # Announce to the ROCK commit that a release is in progress
+      - name: Report the start of the ROCK release
+        uses: LouisBrunner/checks-action@v1.1.1
+        continue-on-error: true
+        id: checks-release-start
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          name: Releasing ${{ matrix.rock.tag }}
+          sha: ${{ matrix.rock.sha }}
+          repo: ${{ matrix.rock.full_name }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-release-id }}
+          status: in_progress
+          output: |
+            {"summary": "Releasing ROCK revision ${{ matrix.rock.revision }} for ${{ matrix.rock.name }}, on track ${{ matrix.rock.track }}, for risk ${{ matrix.rock.risk }}"}
+
+      ################################
+      ### PREPARE ENVIRONMENT
+      ################################
+      # Get the ROCK CI/CD pipeline scripts
+      - name: Checkout the ROCK CI/CD pipelines repository
+        uses: actions/checkout@v3
+        with:
+          repository: ubuntu-rocks/rocks-pipelines
+          ref: main
+          token: ${{ steps.get_token.outputs.app_token }}
+          submodules: "recursive"
+          path: ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}
+      # Install requirements for ROCKs CI/CD pipelines
+      - name: Prepare environment to run ROCKs CI/CD pipelines
+        env:
+          ROCKS_DEV_LP_SSH_PRIVATE: ${{ secrets.ROCKS_DEV_LP_SSH_PRIVATE }}
+          ROCKS_DEV_LP_USERNAME: ${{ secrets.ROCKS_DEV_LP_USERNAME }}
+        run: |
+          set -eux
+          ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/requirements.sh
+      
+      ################################
+      ### INTO OCI ARCHIVE
+      ################################
+      # Get the ROCK's canonical tag from Docker Hub into an OCI archive
+      - name: From DH to OCI archive
+        id: get-oci-archive
+        env: 
+          DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+        run: |
+          set -eux
+          rock="${DOCKER_HUB_NAMESPACE}/${{ matrix.rock.rock_name }}:${{ matrix.rock.rock_version }}-${{ matrix.rock.rock_base }}_${{ matrix.rock.revision }}"
+          oci_archive="${{ matrix.rock.rock_name }}_${{ matrix.rock.rock_version }}-${{ matrix.rock.rock_base }}_${{ matrix.rock.revision }}.rock"
+          docker run -w /rock \
+            -v $PWD:/rock \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            quay.io/skopeo/stable:v1.8 copy --multi-arch all --preserve-digests docker://${rock} oci-archive:/rock/${oci_archive}
+          
+          echo "::set-output name=oci-archive::$PWD/${oci_archive}"
+
+      ################################
+      ### RE-TAG
+      ################################
+      # Define new tags and release ROCK
+      - name: Re-tag and release
+        env:
+          DOCKER_HUB_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.DOCKER_HUB_CREDS_PSW || secrets.STAGING_DOCKER_HUB_CREDS_PSW }}
+          DOCKER_HUB_CREDS_USR: ${{ github.ref_name == 'main' && secrets.DOCKER_HUB_CREDS_USR || secrets.STAGING_DOCKER_HUB_CREDS_USR }}
+          ACR_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ACR_CREDS_USR || secrets.STAGING_ACR_CREDS_USR }}
+          ACR_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ACR_CREDS_PSW || secrets.STAGING_ACR_CREDS_PSW }}
+          ECR_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ECR_CREDS_USR || secrets.STAGING_ECR_CREDS_USR }}
+          ECR_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ECR_CREDS_PSW || secrets.STAGING_ECR_CREDS_PSW }}
+          ECR_LTS_CREDS_USR: ${{ github.ref_name == 'main' && secrets.ECR_LTS_CREDS_USR || secrets.STAGING_ECR_LTS_CREDS_USR }}
+          ECR_LTS_CREDS_PSW: ${{ github.ref_name == 'main' && secrets.ECR_LTS_CREDS_PSW || secrets.STAGING_ECR_LTS_CREDS_PSW }}
+          
+          ACR_NAMESPACE: ${{ github.ref_name == 'main' && 'ubuntu.azurecr.io' || secrets.STAGING_ACR_NAMESPACE }}
+          DOCKER_HUB_NAMESPACE: ${{ github.ref_name == 'main' && 'docker.io/ubuntu' || secrets.STAGING_DOCKER_HUB_NAMESPACE }}
+          ECR_NAMESPACE: ${{ github.ref_name == 'main' && 'ubuntu' || secrets.STAGING_ECR_NAMESPACE }}
+          ECR_LTS_NAMESPACE: ${{ github.ref_name == 'main' && 'lts' || secrets.STAGING_ECR_LTS_NAMESPACE }}
+
+          RELEASE_FOR_RISKS: ${{ matrix.rock.all_risks }}
+          TRACK: ${{ matrix.rock.track }}
+          RISK: ${{ matrix.rock.risk }}
+          BASE: ${{ matrix.rock.rock_base }}
+          REVISION: ${{ matrix.rock.revision }}
+          OCI_ARCHIVE: ${{ steps.get-oci-archive.outputs.oci-archive }}
+          ROCK_NAME: ${{ matrix.rock.rock_name }}
+          ROCK_REPO: ${{ matrix.rock.full_name }}  
+          ROCK_VERSION: ${{ matrix.rock.rock_version }}  
+          RELEASE_TAG: ${{ matrix.rock.tag }}
+        run: ./oci-re-tag-and-release.sh ${{ steps.get_token.outputs.app_token }}
+          
+      ################################
+      # -----------------------------------------------------
+      # Announce to the ROCK commit that a build has finished
+      - name: Report the end of the ROCK release
+        uses: LouisBrunner/checks-action@v1.1.1
+        if: always()
+        continue-on-error: true
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          check_id: ${{ steps.checks-release-start.outputs.check_id }}
+          sha: ${{ matrix.rock.sha }}
+          repo: ${{ matrix.rock.full_name }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-release-id }}
+          status: completed
+          conclusion: ${{ job.status }}
+          output: |
+            {"summary": "The release ${{ matrix.rock.tag }} has finished with '${{ job.status }}'. You can view the build logs at ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-release-id }}"}
