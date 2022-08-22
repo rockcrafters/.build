@@ -1,0 +1,98 @@
+name: Release my ROCK
+
+on:
+  workflow_dispatch:
+    inputs:
+      rocks-project:
+        description: "Repo (eg. 'mock-rock')"
+        required: true
+        type: string
+      rock:
+        description: "ROCK name (eg. 'mock-one')"
+        required: true
+        type: string
+      revision:
+        description: "Revision to release"
+        required: true
+        type: string
+      risk:
+        description: "Release to risk"
+        required: true
+        default: "edge"
+        type: choice
+        options:
+          - edge
+          - beta
+          - candidate
+          - stable
+      track:
+        description: "Release to track"
+        required: true
+        type: string
+
+env:
+  ROCK_PROJECT_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-project"
+
+jobs:
+  create-relese-request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      # Fetch GH App token for performing org operation during the pipeline
+      - name: Get token for Organization Workflow
+        id: get_token
+        uses: machine-learning-apps/actions-app-token@master
+        with:
+          APP_PEM: ${{ secrets.APP_PEM }}
+          APP_ID: ${{ secrets.APP_ID }}
+      # Check if user can make request, and if request is legit
+      - name: Validate release request
+        id: request-validator
+        run: |
+          ./validate-release-request.py --token ${{ steps.get_token.outputs.app_token }} \
+              --repo ${{ inputs.rocks-project }} \
+              --rock-name ${{ inputs.rock }} \
+              --revision ${{ inputs.revision }} \
+              --risk ${{ inputs.risk }} \
+              --track ${{ inputs.track }}
+      # Get the corresponding ROCK build tag
+      - name: Checkout ${{ steps.request-validator.outputs.build-tag }} from the ROCK repo (${{ inputs.rocks-project }})
+        uses: actions/checkout@v3
+        with:
+          repository: ubuntu-rocks/${{ inputs.rocks-project }}
+          ref: ${{ steps.request-validator.outputs.build-tag }}
+          token: ${{ steps.get_token.outputs.app_token }}
+          path: ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}
+      # Create release request via a Git tag
+      - name: Create Git tag
+        id: git-tag
+        run: |
+          echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,${{ inputs.revision }},_" > pub.txt
+
+          ./create-git-tags.sh \
+            ${{ steps.get_token.outputs.app_token }} \
+            pub.txt \
+            _ \
+            ubuntu-rocks/${{ inputs.rocks-project }} \
+            $(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD) \
+            ${{ inputs.track }} \
+            ${{ inputs.risk }} \
+            true
+          echo "::set-output name=commit::$(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD)"
+      # Announce the Git tags have been created
+      - name: Report that the release has been requested
+        uses: LouisBrunner/checks-action@v1.1.1
+        continue-on-error: true
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          name: Manual release request (${{ inputs.rock }}(${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }})
+          sha: ${{ steps.git-tag.outputs.commit }}
+          repo: ubuntu-rocks/${{ inputs.rocks-project }}
+          conclusion: success
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          output: |
+            {"summary": "Received a manual request for releasing ${{ inputs.rock }} (revision ${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }}. See the new Git tag ${{ steps.git-tags.outputs.release-tags }}"}
+
