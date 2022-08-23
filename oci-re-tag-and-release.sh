@@ -40,7 +40,7 @@ cat>gh_release.txt<<EOF
 {
   "tag_name":"$RELEASE_TAG",
   "name":"$RELEASE_TAG",
-  "body":"$ROCK_NAME is now in $TRACK/$RISK. New OCI tags: $(echo $new_oci_tags | tr " " "\n")",
+  "body":"$ROCK_NAME is now in $TRACK/$RISK. New OCI tags: $(echo $new_oci_tags | tr ' ' ',')",
   "draft":false,
   "prerelease":false,
   "generate_release_notes":false
