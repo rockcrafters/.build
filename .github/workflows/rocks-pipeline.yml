@@ -100,6 +100,12 @@ jobs:
           token: ${{ steps.get_token.outputs.app_token }}
           submodules: "recursive"
           path: ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}
+      # Setup QEMU and Docker buildx
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
       # Install requirements for ROCKs CI/CD pipelines
       - name: Prepare environment to run ROCKs CI/CD pipelines
         env:
