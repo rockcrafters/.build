@@ -9,6 +9,7 @@ on:
 
 env:
   ROCKS_CICD_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-cicd"
+  IS_LTS: 0
 
 jobs:
   check-for-new-release-requests:

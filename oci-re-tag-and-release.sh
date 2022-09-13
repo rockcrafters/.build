@@ -16,10 +16,13 @@ do
     fi
 done
 
-IS_LTS=0
-if `ubuntu-distro-info -a -f | grep $BASE | grep LTS >/dev/null`
+if [ -z $IS_LTS ]
 then
-    IS_LTS=1
+  IS_LTS=0
+  if `ubuntu-distro-info -a -f | grep $BASE | grep LTS >/dev/null`
+  then
+      IS_LTS=1
+  fi
 fi
 
 # TODO: we are unnecessarily pushing the whole ROCK once more
