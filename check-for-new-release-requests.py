@@ -82,14 +82,16 @@ if __name__ == "__main__":
                 # There is already a GH release for this release tag...move on
                 continue
 
-            revision, track, risk = rtag["name"].split("/")[2:]
+            rock_image_name, revision, track, risk = rtag["name"].split("/")[1:]
 
             logging.info(
                 f"There is a release request tag {rtag['name']} without a GitHub release"
             )
             # Confirm that the corresponding release tag as an associated build tag
             corresponding_build_tag = [
-                t for t in build_tags if t["name"].endswith(f"/{revision}")
+                t
+                for t in build_tags
+                if t["name"].endswith(f"/{revision}") and rock_image_name in t["name"]
             ]
             if not corresponding_build_tag:
                 logging.warning(
@@ -99,7 +101,7 @@ if __name__ == "__main__":
                     )
                 )
                 continue
-            
+
             if corresponding_build_tag[0]["commit"]["sha"] != rtag["commit"]["sha"]:
                 raise Exception(
                     f"The requested release tag {rtag['name']} does not point to the "
