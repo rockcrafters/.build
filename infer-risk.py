@@ -18,7 +18,6 @@ if __name__ == "__main__":
         risk = branch[2]
     except IndexError:
         # this means a risk was not provided
-        # default to "edge"
         risk = ""
 
     if risk in supported_risks:
