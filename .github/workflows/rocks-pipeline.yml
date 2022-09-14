@@ -21,6 +21,7 @@ env:
   ROCKS_CICD_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-cicd"
   GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION: "${{ github.workspace }}"
   ROCK_PROJECT_CHECKOUT_LOCATION: "${{ github.workspace }}/rocks-project"
+  IS_LTS: 0
 
 jobs:
   rocks-ci-cd-pipeline:
