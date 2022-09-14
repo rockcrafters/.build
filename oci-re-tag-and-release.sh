@@ -28,7 +28,7 @@ fi
 # TODO: we are unnecessarily pushing the whole ROCK once more
 # just because we want to reuse the cpc-build-tools.oci-registry-upload script.
 # Instead, we just needed to push indexes...so we should refactor the code
-args="$OCI_ARCHIVE $ROCK_NAME _ _ $IS_LTS ${new_oci_tags}"
+args="$OCI_ARCHIVE $ROCK_NAME _ _ $IS_LTS _ ${new_oci_tags}"
 retry=0
 $ROCKS_CICD_CHECKOUT_LOCATION/src/Tag-and-Publish.sh $args || retry=1
 if [ $retry -eq 1 ]
