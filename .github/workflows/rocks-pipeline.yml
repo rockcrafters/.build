@@ -210,10 +210,18 @@ jobs:
         id: black-box-testing
         run: |
           set -eux
+          container_images=""
           for rock_oci_archive in ${{ steps.build-rocks.outputs.oci-archives }}
           do
+            container_image_name="$(echo $rock_oci_archive | awk -F"/" '{print $NF}' | tr '.' '_'):latest"
+            docker run --rm \
+              -v $(readlink -f "${rock_oci_archive}"):/rock \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              quay.io/skopeo/stable:v1.8 copy oci-archive:/rock docker-daemon:$container_image_name
+            container_images="$container_images $container_image_name"
             ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Black-Box-Test.py --rock-oci-archive "${rock_oci_archive}"
           done
+          echo "::set-output name=container-images::$container_images"
       # Announce the Black-box-testing was successful
       - name: Report that the Black-box-testing was successful
         uses: LouisBrunner/checks-action@v1.1.1
@@ -232,10 +240,9 @@ jobs:
         id: vulnerability-scanning
         run: |
           set -eux
-          for rock_oci_archive in ${{ steps.build-rocks.outputs.oci-archives }}
+          for rock in ${{ steps.black-box-testing.outputs.container-images }}
           do
-            container_image_name="$(echo $rock_oci_archive | awk -F"/" '{print $NF}' | sed -z 's/.rock//g')"
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${container_image_name}"
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${rock}"
           done
       # Announce the vulnerability scans were successful
       - name: Report that the image has no high/critical vulnerabilities
@@ -250,6 +257,35 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
           output: |
             {"summary": "Could not find any High or Critical vulnerabilities for: ${{ steps.build-rocks.outputs.oci-archives }}"}
+      # Malware scans
+      - name: Run Malware Scans
+        id: malware-scanning
+        run: |
+          set -eux
+          for rock in ${{ steps.black-box-testing.outputs.container-images }}
+          do
+            docker create --name rock $rock
+            docker export rock -o rock.tar
+            mkdir rock
+            tar -xf rock.tar -C rock/
+            docker rm rock
+            rm rock.tar
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Malware-Scan.py --filesystem ./rock
+            rm -fr rock
+          done
+      # Announce the vulnerability scans were successful
+      - name: Report that the image has no viruses
+        uses: LouisBrunner/checks-action@v1.1.1
+        continue-on-error: true
+        with:
+          token: ${{ steps.get_token.outputs.app_token }}
+          name: No malware detected
+          sha: ${{ matrix.rock.sha }}
+          repo: ${{ matrix.rock.full_name }}
+          conclusion: success
+          details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
+          output: |
+            {"summary": "Could not find any infected files (malware) in: ${{ steps.build-rocks.outputs.oci-archives }}"}
 
       ################################
       ### TAG AND PUBLISH
