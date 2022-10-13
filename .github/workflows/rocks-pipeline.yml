@@ -264,7 +264,7 @@ jobs:
           set -eux
           for rock in ${{ steps.black-box-testing.outputs.container-images }}
           do
-            docker create --name rock $rock
+            docker create --name rock $rock foo
             docker export rock -o rock.tar
             mkdir rock
             tar -xf rock.tar -C rock/
