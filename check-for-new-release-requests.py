@@ -91,7 +91,7 @@ if __name__ == "__main__":
             corresponding_build_tag = [
                 t
                 for t in build_tags
-                if t["name"].endswith(f"/{revision}") and rock_image_name in t["name"]
+                if t["name"].endswith(f"/{revision}") and f"{rock_image_name}/{track}" in t["name"] 
             ]
             if not corresponding_build_tag:
                 logging.warning(
