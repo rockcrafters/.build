@@ -96,7 +96,7 @@ jobs:
       - name: Checkout the ROCK CI/CD pipelines repository
         uses: actions/checkout@v3
         with:
-          repository: ubuntu-rocks/rocks-pipelines
+          repository: canonical/rocks-pipelines
           ref: main
           token: ${{ steps.get_token.outputs.app_token }}
           submodules: "recursive"
