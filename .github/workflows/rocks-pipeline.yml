@@ -313,10 +313,10 @@ jobs:
           do
             # TODO: improve error handling and potentially cleanup 
             retry=0
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $(echo $publish_rock | tr "," " ") || retry=1
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Tag-and-Publish.sh $(echo $publish_rock | tr "," " ") || retry=1
             if [ $retry -eq 1 ]
             then
-              ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/Tag-and-Publish.sh $(echo $publish_rock | tr "," " ")
+              ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/Tag-and-Publish.sh $(echo $publish_rock | tr "," " ")
               # Sometimes pushes are reset by peer 
             fi
             published+=( $(echo $publish_rock | awk -F"," '{print $2":"$7}') )

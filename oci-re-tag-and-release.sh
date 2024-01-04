@@ -30,10 +30,10 @@ fi
 # Instead, we just needed to push indexes...so we should refactor the code
 args="$OCI_ARCHIVE $ROCK_NAME _ _ $IS_LTS _ ${new_oci_tags}"
 retry=0
-$ROCKS_CICD_CHECKOUT_LOCATION/src/Tag-and-Publish.sh $args || retry=1
+$ROCKS_CICD_CHECKOUT_LOCATION/src/rocks/Tag-and-Publish.sh $args || retry=1
 if [ $retry -eq 1 ]
 then
-    $ROCKS_CICD_CHECKOUT_LOCATION/src/Tag-and-Publish.sh $args 
+    $ROCKS_CICD_CHECKOUT_LOCATION/src/rocks/Tag-and-Publish.sh $args 
     # Sometimes pushes are reset by peer 
 fi
 
