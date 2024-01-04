@@ -119,7 +119,6 @@ To create these exclusion rules, let's create a control file in the [organizatio
       repositories:
       - '.admin'
       - '.github'
-      - 'rocks-pipelines'
       - 'mock-rock'
       - '.build'
     ```
