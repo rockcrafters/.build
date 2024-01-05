@@ -98,7 +98,7 @@ jobs:
         with:
           repository: canonical/rocks-pipelines
           ref: main
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ secrets.ROCKSBOT_TOKEN }}
           submodules: "recursive"
           path: ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}
       # Setup QEMU and Docker buildx
