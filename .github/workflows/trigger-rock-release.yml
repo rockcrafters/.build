@@ -135,7 +135,7 @@ jobs:
           docker run -w /rock \
             -v $PWD:/rock \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            quay.io/skopeo/stable:v1.13 copy --multi-arch all --preserve-digests docker://${rock} oci-archive:/rock/${oci_archive}
+            quay.io/skopeo/stable:v1.15.1 copy --multi-arch all --preserve-digests docker://${rock} oci-archive:/rock/${oci_archive}
           
           echo "::set-output name=oci-archive::$PWD/${oci_archive}"
 

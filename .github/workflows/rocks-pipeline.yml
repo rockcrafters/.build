@@ -217,7 +217,7 @@ jobs:
             docker run --rm \
               -v $(readlink -f "${rock_oci_archive}"):/rock \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              quay.io/skopeo/stable:v1.13 copy oci-archive:/rock docker-daemon:$container_image_name
+              quay.io/skopeo/stable:v1.15.1 copy oci-archive:/rock docker-daemon:$container_image_name
             container_images="$container_images $container_image_name"
             ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Black-Box-Test.py --rock-oci-archive "${rock_oci_archive}"
           done
