@@ -11,7 +11,7 @@ sys.path.append(SCRIPT_DIR)
 
 from helper_functions import get_all_pages
 
-ORG = "ubuntu-rocks"
+ORG = "rockcrafters"
 GIT_API_URL = "https://api.github.com"
 
 

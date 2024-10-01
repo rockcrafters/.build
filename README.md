@@ -1,16 +1,16 @@
-[![Trigger new builds for updated ROCKS](https://github.com/ubuntu-rocks/.build/actions/workflows/trigger-rock-build-on-changes.yml/badge.svg?branch=main)](https://github.com/ubuntu-rocks/.build/actions/workflows/trigger-rock-build-on-changes.yml)
+[![Trigger new builds for updated ROCKS](https://github.com/rockcrafters/.build/actions/workflows/trigger-rock-build-on-changes.yml/badge.svg?branch=main)](https://github.com/rockcrafters/.build/actions/workflows/trigger-rock-build-on-changes.yml)
 
 ---
 
 # ROCKs' Builder: one CI/CD for all ROCKs
 
-Building all the ROCKS from [ubuntu-rocks](https://github.com/ubuntu-rocks), in one place.
+Building all the ROCKS from [rockcrafters](https://github.com/rockcrafters), in one place.
 
 ## Purpose
 
 This is a built-in repository for hosting the CI/CD workflow responsible for 
 building, testing and publishing ROCKs which are being hosted in the 
-[ubuntu-rocks](https://github.com/ubuntu-rocks) organization.
+[rockcrafters](https://github.com/rockcrafters) organization.
 
 Its purpose is tightly coupled with the organization's settings, meaning that 
 the way the repository is structured, as well as its CI/CD workflows, are 
@@ -20,7 +20,7 @@ and in compliance with this repository's expectations.
 
 ## Why?
 
-The [ubuntu-rocks](https://github.com/ubuntu-rocks) organization is expected to 
+The [rockcrafters](https://github.com/rockcrafters) organization is expected to 
 host multiple repositories from which ROCKs should be built. Consider it as being 
 a playground for learning how to design and build ROCKs without the burden of 
 manually building, testing and publishing each ROCK, everytime there's a 
@@ -35,7 +35,7 @@ automate the CI/CD for all ROCKs in the organization.
 ## Developer's Guide
 
 This repository needs to centrally manage and run CI/CD for multiple repositories 
-across the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization. We could 
+across the [rockcrafters](https://github.com/rockcrafters) organization. We could 
 achieve a similar cross-repo CI/CD experience via ROCK-specific [Reusable Workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows), [Starter Workflows](https://docs.github.com/en/actions/using-workflows/creating-starter-workflows-for-your-organization), or even 
 [Composite Actions](https://docs.github.com/en/actions/creating-actions/creating-a-composite-action). 
 The problem with these approaches however is that all of them rely on the ROCK repository to 
@@ -69,9 +69,9 @@ Let's break down what needs to be done to enable and configure this GitHub App.
 Please note that the following steps have already been performed in this organization, 
 and are here listed for reproducibility purposes only.
 
-Since we only need an App token, all we have to do is to create a mock "GitHub ROCKs App". **As an admin of [ubuntu-rocks](https://github.com/ubuntu-rocks)**, you need to:
+Since we only need an App token, all we have to do is to create a mock "GitHub ROCKs App". **As an admin of [rockcrafters](https://github.com/rockcrafters)**, you need to:
 
- 1. from the [ubuntu-rocks App settings](https://github.com/organizations/ubuntu-rocks/settings/apps), create a new GitHub App
+ 1. from the [rockcrafters App settings](https://github.com/organizations/rockcrafters/settings/apps), create a new GitHub App
  2. fill in the App's details, making sure that 
      - "Webhook" is only enabled if there's an actual application running somewhere, behind a webhook, and
      - at least the following permissions are granted:
@@ -93,10 +93,10 @@ Since we only need an App token, all we have to do is to create a mock "GitHub R
          - **Secrets:** r
        - User:
          - **Email addresses:** r
- 3. click "Create GitHub App", **only on this account** (i.e. the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization)
+ 3. click "Create GitHub App", **only on this account** (i.e. the [rockcrafters](https://github.com/rockcrafters) organization)
  4. from the newly created App page, click on "Generate private key" (this will download a PEM file), and also copy the "App ID" number
- 5. from the GitHub App's settings page, install the App into the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization, for all repositories
- 6. go to [this repo's settings](https://github.com/ubuntu-rocks/.build/settings) and navigate to Secrets -> Actions
+ 5. from the GitHub App's settings page, install the App into the [rockcrafters](https://github.com/rockcrafters) organization, for all repositories
+ 6. go to [this repo's settings](https://github.com/rockcrafters/.build/settings) and navigate to Secrets -> Actions
  7. create a "New repository secret" called **APP_ID** and paste the App ID number copied above
  8. create a "New repository secret" called **APP_PEM** and paste the *base64 encoded* contents of the PEM file downloaded above (i.e. `cat rocks-token-app.\<date\>.private-key.pem | base64 -w 0 && echo`). Afterwards, you can either securely keep this PEM file or delete it, because we can always generate a new private key for this App if need be
  9. these repository variables are then used from within the GitHub workflows, everytime we need to capture the GitHub App token. The retrieval of said token can be done via this GitHub action: <https://github.com/machine-learning-apps/actions-app-token>
@@ -105,11 +105,11 @@ Since we only need an App token, all we have to do is to create a mock "GitHub R
 
 There are repositories within the organization that we don't want to scan or build for, since they might be dedicated to something else than a ROCK (e.g. `.github` and `.build` repositories).
 
-To create these exclusion rules, let's create a control file in the [organization's `.github` repository](https://github.com/ubuntu-rocks/.github/), called `organization-workflows-settings.yml` (note: this is the same file and syntax that one would use when working with the [Organization Workflows](https://probot.github.io/apps/organization-workflows/) GitHub App)
+To create these exclusion rules, let's create a control file in the [organization's `.github` repository](https://github.com/rockcrafters/.github/), called `organization-workflows-settings.yml` (note: this is the same file and syntax that one would use when working with the [Organization Workflows](https://probot.github.io/apps/organization-workflows/) GitHub App)
 
- 1. make sure the [ubuntu-rocks](https://github.com/ubuntu-rocks) organization has a [.github](https://github.com/ubuntu-rocks/.github) repository
+ 1. make sure the [rockcrafters](https://github.com/rockcrafters) organization has a [.github](https://github.com/rockcrafters/.github) repository
  2. create a file named `organization-workflows-settings.yml` at the root of the 
- [.github](https://github.com/ubuntu-rocks/.github) repository, with the following content:
+ [.github](https://github.com/rockcrafters/.github) repository, with the following content:
 
     ```yaml
     workflows_repository: .build

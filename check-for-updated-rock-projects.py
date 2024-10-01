@@ -10,14 +10,14 @@ sys.path.append(SCRIPT_DIR)
 
 from helper_functions import get_all_pages, check_org_argparse, list_rocks_projects
 
-ORG = "ubuntu-rocks"
+ORG = "rockcrafters"
 GIT_API_URL = "https://api.github.com"
 
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     parser = check_org_argparse(
-        "Scan the ubuntu-rocks GitHub organization, finding which ROCK repos have been updated and need a new build."
+        "Scan the rockcrafters GitHub organization, finding which ROCK repos have been updated and need a new build."
     )
     args = parser.parse_args()
 

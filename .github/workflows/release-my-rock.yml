@@ -63,7 +63,7 @@ jobs:
       - name: Checkout ${{ steps.request-validator.outputs.build-tag }} from the ROCK repo (${{ inputs.rocks-project }})
         uses: actions/checkout@v3
         with:
-          repository: ubuntu-rocks/${{ inputs.rocks-project }}
+          repository: rockcrafters/${{ inputs.rocks-project }}
           ref: ${{ steps.request-validator.outputs.build-tag }}
           token: ${{ steps.get_token.outputs.app_token }}
           path: ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}
@@ -78,7 +78,7 @@ jobs:
             ${{ steps.get_token.outputs.app_token }} \
             $PWD/pub.txt \
             _ \
-            ubuntu-rocks/${{ inputs.rocks-project }} \
+            rockcrafters/${{ inputs.rocks-project }} \
             $(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD) \
             ${{ inputs.track }} \
             ${{ inputs.risk }} \
@@ -92,7 +92,7 @@ jobs:
           token: ${{ steps.get_token.outputs.app_token }}
           name: Manual release request (${{ inputs.rock }}(${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }})
           sha: ${{ steps.git-tag.outputs.commit }}
-          repo: ubuntu-rocks/${{ inputs.rocks-project }}
+          repo: rockcrafters/${{ inputs.rocks-project }}
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |

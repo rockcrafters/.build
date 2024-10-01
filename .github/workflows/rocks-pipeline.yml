@@ -11,7 +11,7 @@ on:
       # Expects a list of combinations, referring to all the ROCKs to be built
       # This value is later on given to a "matrix"
       # The expected format is:
-      #   [{'full_name': <ubuntu-rocks/repo>, 'name': <repo>, 'sha': <commit>, 'branch': <branch>}, ...]
+      #   [{'full_name': <rockcrafters/repo>, 'name': <repo>, 'sha': <commit>, 'branch': <branch>}, ...]
       matrix_combinations:
         required: true
         type: string
@@ -393,7 +393,7 @@ jobs:
         if: always()
         with:
           token: ${{ steps.get_token.outputs.app_token }}
-          title: "[${{ job.status }}] ubuntu-rocks build for ${{ matrix.rock.name }}"
+          title: "[${{ job.status }}] rockcrafters build for ${{ matrix.rock.name }}"
           repo: ${{ matrix.rock.name }}
           body: |
             Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
