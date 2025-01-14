@@ -36,9 +36,9 @@ jobs:
           echo "::set-output name=releases::[]"
           if [ "${{ github.ref_name }}" == "main" ]
           then
-            ./check-for-new-release-requests.py --token ${{ steps.get_token.outputs.app_token }}
+            ./check-for-new-release-requests.py --token ${{ secrets.ROCKSBOT_TOKEN }}
           else
-            ./check-for-new-release-requests.py --on-repo mock-rock --token ${{ steps.get_token.outputs.app_token }}
+            ./check-for-new-release-requests.py --on-repo mock-rock --token ${{ secrets.ROCKSBOT_TOKEN }}
           fi
 
   release-rocks:
