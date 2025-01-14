@@ -1,6 +1,7 @@
 name: Trigger new releases of ROCKs
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *"
   push:
