@@ -39,7 +39,18 @@ def get_all_pages(url: str, headers: dict, params: dict) -> list:
     while True:
         params["page"] = page_num
         page_objs = requests.get(url, headers=headers, params=params)
-        page_objs.raise_for_status()
+        try:
+            page_objs.raise_for_status()
+        except requests.exceptions.HTTPError:
+            if (
+                page_objs.status_code == 409
+                and page_objs.json().get("message") == "Git Repository is empty."
+            ):
+                # This is a special case where the repo has no branches
+                logging.warning(f"Skipping {url} because it has no branches.")
+                break
+            else:
+                raise
         objects += page_objs.json()
 
         if len(page_objs.json()) == 100:
