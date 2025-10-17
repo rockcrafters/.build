@@ -237,6 +237,10 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
           output: |
             {"summary": "Successfully performed the Black-box tests for: ${{ steps.build-rocks.outputs.oci-archives }}"}
+      # Prepare Trivy ignore file for ASP.NET 6
+      - name: Prepare Trivy Ignore File
+        run : |
+          echo -e "CVE-2025-24070\n" > .trivyignore
       # Vulnerability scans
       - name: Run Vulnerability Scans
         id: vulnerability-scanning
@@ -244,7 +248,7 @@ jobs:
           set -eux
           for rock in ${{ steps.black-box-testing.outputs.container-images }}
           do
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${rock}"
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${rock}" --additional-trivy-args "--ignorefile .trivyignore"
           done
       # Announce the vulnerability scans were successful
       - name: Report that the image has no high/critical vulnerabilities
