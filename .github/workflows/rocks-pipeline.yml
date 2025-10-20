@@ -253,6 +253,7 @@ jobs:
       - name: Report that the image has no high/critical vulnerabilities
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
+        if: steps.vulnerability-scanning.outcome == 'success'
         with:
           token: ${{ steps.get_token.outputs.app_token }}
           name: No High/Critical vulnerabilities
