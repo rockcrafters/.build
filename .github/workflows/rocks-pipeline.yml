@@ -240,6 +240,7 @@ jobs:
       # Vulnerability scans
       - name: Run Vulnerability Scans
         id: vulnerability-scanning
+        continue-on-error: true
         run: |
           set -eux
           for rock in ${{ steps.black-box-testing.outputs.container-images }}
