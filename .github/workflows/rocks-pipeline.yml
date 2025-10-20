@@ -240,6 +240,8 @@ jobs:
       # Vulnerability scans
       - name: Run Vulnerability Scans
         id: vulnerability-scanning
+        # Note: We set continue-on-error to true here to bypass the deferred fix on CVE-2025-24070 for the ASP .NET 6 runtime.
+        # TODO: Remove the `continue-on-error: true` once fix for ASP .NET 6 runtime is available.
         continue-on-error: true
         run: |
           set -eux
