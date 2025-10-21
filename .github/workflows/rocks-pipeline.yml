@@ -237,23 +237,23 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/runs/${{ steps.check-run-id.outputs.rock-build-id }}
           output: |
             {"summary": "Successfully performed the Black-box tests for: ${{ steps.build-rocks.outputs.oci-archives }}"}
-      # Prepare Trivy ignore file for ASP.NET 6
-      - name: Prepare Trivy Ignore File
-        run : |
-          echo -e "CVE-2025-24070\n" > .trivyignore
       # Vulnerability scans
       - name: Run Vulnerability Scans
         id: vulnerability-scanning
+        # Note: We set continue-on-error to true here to bypass the deferred fix on CVE-2025-24070 for the ASP .NET 6 runtime.
+        # TODO: Remove the `continue-on-error: true` once fix for ASP .NET 6 runtime is available.
+        continue-on-error: true
         run: |
           set -eux
           for rock in ${{ steps.black-box-testing.outputs.container-images }}
           do
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${rock}" --additional-trivy-args "--ignorefile .trivyignore"
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Vulnerability-Scan.py --image "${rock}"
           done
       # Announce the vulnerability scans were successful
       - name: Report that the image has no high/critical vulnerabilities
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
+        if: steps.vulnerability-scanning.outcome == 'success'
         with:
           token: ${{ steps.get_token.outputs.app_token }}
           name: No High/Critical vulnerabilities
