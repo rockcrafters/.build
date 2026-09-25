@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import os
 import requests
@@ -37,11 +38,11 @@ if __name__ == "__main__":
 
         logging.info(f"Scanning channel branches in {project['name']} project...")
         # Get all channel branches
-        url = f"{GIT_API_URL}/repos/{ORG}/{project['name']}/git/matching-refs/heads/channels/"
+        url = f"{GIT_API_URL}/repos/{project['full_name']}/git/matching-refs/heads/channels/"
         project_branches = get_all_pages(url, headers, {})
 
         # Git API does not allow searching tags by commit
-        url = f"{GIT_API_URL}/repos/{ORG}/{project['name']}/tags"
+        url = f"{GIT_API_URL}/repos/{project['full_name']}/tags"
         all_project_tags = get_all_pages(url, headers, {})
 
         for channel in project_branches:
@@ -73,7 +74,8 @@ if __name__ == "__main__":
 
                 new_commits.append(
                     {
-                        "full_name": f"{ORG}/{project['name']}",
+                        "full_name": project["full_name"],
+                        "owner": project["owner"]["login"],
                         "name": project["name"],
                         "sha": sha,
                         "branch": channel["name"],
@@ -114,4 +116,4 @@ if __name__ == "__main__":
     if len(instances_of_this_workflow) >= 2:
         output_variable = "queue"
 
-    print(f"::set-output name={output_variable}::{new_commits}")
+    print(f"::set-output name={output_variable}::{json.dumps(new_commits)}")

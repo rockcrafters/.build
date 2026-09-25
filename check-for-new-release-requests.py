@@ -7,6 +7,7 @@ naming convention:
 If there are any of these tags, without an associated GitHub release, 
 then release and re-tag (OCI) that ROCK."""
 
+import json
 import logging
 import os
 import re
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 
         logging.info(f"Scanning new release requests in {rock['name']} project...")
         # Get all tags
-        url = f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/tags"
+        url = f"{GIT_API_URL}/repos/{rock['full_name']}/tags"
         all_rock_tags = get_all_pages(url, headers, {})
         release_tags = list(
             filter(
@@ -67,7 +68,7 @@ if __name__ == "__main__":
         for rtag in release_tags:
             # Get GH release (if any) for this tag
             url = (
-                f"{GIT_API_URL}/repos/{ORG}/{rock['name']}/releases/tags/{rtag['name']}"
+                f"{GIT_API_URL}/repos/{rock['full_name']}/releases/tags/{rtag['name']}"
             )
             gh_release = requests.get(url, headers=headers)
             try:
@@ -113,7 +114,8 @@ if __name__ == "__main__":
             revision, track, risk = rtag["name"].split("/")[2:]
             new_release_tags.append(
                 {
-                    "full_name": f"{ORG}/{rock['name']}",
+                    "full_name": rock["full_name"],
+                    "owner": rock["owner"]["login"],
                     "name": rock["name"],
                     "sha": rtag["commit"]["sha"],
                     "tag": rtag["name"],
@@ -128,4 +130,4 @@ if __name__ == "__main__":
                 }
             )
 
-    print(f"::set-output name=releases::{new_release_tags}")
+    print(f"::set-output name=releases::{json.dumps(new_release_tags)}")

@@ -71,7 +71,7 @@ jobs:
         continue-on-error: true 
         id: checks-queue
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: ROCK is in build queue
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}

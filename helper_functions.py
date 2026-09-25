@@ -5,6 +5,8 @@ import os
 import requests
 import yaml
 
+MIGRATED_REPOSITORIES = ("canonical/dotnet-containers", "canonical/chiseled-jre")
+
 
 def check_org_argparse(description) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
@@ -64,9 +66,10 @@ def get_all_pages(url: str, headers: dict, params: dict) -> list:
 def list_rocks_projects(api_url: str, org: str, headers: dict, single_repo: str = None):
     if single_repo:
         logging.info(f"Check for updates only on repo {single_repo}")
-        exclude_repos = []
+        repo = single_repo if "/" in single_repo else f"{org}/{single_repo}"
+        exclude_repos = ["dotnet"] if repo == f"{org}/dotnet" else []
         # Get all the ROCK projects
-        url = f"{api_url}/repos/{org}/{single_repo}"
+        url = f"{api_url}/repos/{repo}"
         rocks_projects = [requests.get(url, headers=headers, params={}).json()]
     else:
         # Get which repos are to be excluded from this check
@@ -81,6 +84,8 @@ def list_rocks_projects(api_url: str, org: str, headers: dict, single_repo: str 
             "repositories", []
         )
 
+        exclude_repos.append("dotnet")
+
         if exclude_repos:
             logging.info(
                 f"Excluding the following repositories from this check: {exclude_repos}"
@@ -94,5 +99,9 @@ def list_rocks_projects(api_url: str, org: str, headers: dict, single_repo: str 
             "direction": "asc",
         }
         rocks_projects = get_all_pages(url, headers, params)
+        for repo in MIGRATED_REPOSITORIES:
+            response = requests.get(f"{api_url}/repos/{repo}", headers=headers)
+            response.raise_for_status()
+            rocks_projects.append(response.json())
 
     return rocks_projects, exclude_repos
