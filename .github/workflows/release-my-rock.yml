@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       rocks-project:
-        description: "Repo (eg. 'mock-rock')"
+        description: "Repo (eg. 'mock-rock' or 'canonical/dotnet-containers')"
         required: true
         type: string
       rock:
@@ -36,6 +36,8 @@ env:
 jobs:
   create-relese-request:
     runs-on: ubuntu-latest
+    env:
+      ROCK_REPO: ${{ contains(inputs.rocks-project, '/') && inputs.rocks-project || format('rockcrafters/{0}', inputs.rocks-project) }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -53,8 +55,8 @@ jobs:
       - name: Validate release request
         id: request-validator
         run: |
-          ./validate-release-request.py --token ${{ steps.get_token.outputs.app_token }} \
-              --repo ${{ inputs.rocks-project }} \
+          ./validate-release-request.py --token ${{ startsWith(env.ROCK_REPO, 'canonical/') && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }} \
+              --repo "$ROCK_REPO" \
               --rock-name ${{ inputs.rock }} \
               --revision ${{ inputs.revision }} \
               --risk ${{ inputs.risk }} \
@@ -63,9 +65,9 @@ jobs:
       - name: Checkout ${{ steps.request-validator.outputs.build-tag }} from the ROCK repo (${{ inputs.rocks-project }})
         uses: actions/checkout@v3
         with:
-          repository: rockcrafters/${{ inputs.rocks-project }}
+          repository: ${{ env.ROCK_REPO }}
           ref: ${{ steps.request-validator.outputs.build-tag }}
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ startsWith(env.ROCK_REPO, 'canonical/') && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           path: ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}
       # Create release request via a Git tag
       - name: Create Git tag
@@ -75,10 +77,10 @@ jobs:
           echo "_,${{ inputs.rock }},${{ steps.request-validator.outputs.rock-version }},_,_,${{ inputs.revision }},_" > $PWD/pub.txt
 
           ./create-git-tags.sh \
-            ${{ steps.get_token.outputs.app_token }} \
+            ${{ startsWith(env.ROCK_REPO, 'canonical/') && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }} \
             $PWD/pub.txt \
             _ \
-            rockcrafters/${{ inputs.rocks-project }} \
+            "$ROCK_REPO" \
             $(cd $ROCK_PROJECT_CHECKOUT_LOCATION && git rev-parse HEAD) \
             ${{ inputs.track }} \
             ${{ inputs.risk }} \
@@ -89,10 +91,10 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ startsWith(env.ROCK_REPO, 'canonical/') && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Manual release request (${{ inputs.rock }}(${{ inputs.revision }}) to ${{ inputs.track }}/${{ inputs.risk }})
           sha: ${{ steps.git-tag.outputs.commit }}
-          repo: rockcrafters/${{ inputs.rocks-project }}
+          repo: ${{ env.ROCK_REPO }}
           conclusion: success
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |

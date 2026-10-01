@@ -4,7 +4,13 @@
 
 # ROCKs' Builder: one CI/CD for all ROCKs
 
-Building all the ROCKS from [rockcrafters](https://github.com/rockcrafters), in one place.
+Building ROCKs from Rockcrafters and the migrated Canonical repositories in one place.
+
+The builder also scans `canonical/dotnet-containers` and
+`canonical/chiseled-jre` and skips `rockcrafters/dotnet`. Writes to the
+Canonical repositories use the existing `ROCKSBOT_TOKEN`, which needs Contents
+and Issues write access there. Check-run reporting also needs Checks write
+access (a classic personal access token cannot provide it).
 
 ## Purpose
 

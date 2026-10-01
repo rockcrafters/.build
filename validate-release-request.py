@@ -9,7 +9,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
 
-from helper_functions import get_all_pages
+from helper_functions import MIGRATED_REPOSITORIES, get_all_pages
 
 ORG = "rockcrafters"
 GIT_API_URL = "https://api.github.com"
@@ -57,8 +57,14 @@ if __name__ == "__main__":
         "Accept": "application/vnd.github+json",
     }
 
+    repo = args.repo if "/" in args.repo else f"{ORG}/{args.repo}"
+    if repo == f"{ORG}/dotnet":
+        parser.error(f"{repo} has moved to canonical/dotnet-containers")
+    if repo.startswith("canonical/") and repo not in MIGRATED_REPOSITORIES:
+        parser.error(f"{repo} is not a configured ROCK project")
+
     # Find the ROCKs project and its contributors
-    url = f"https://api.github.com/repos/{ORG}/{args.repo}/contributors"
+    url = f"https://api.github.com/repos/{repo}/contributors"
     contributors = get_all_pages(url, headers, {})
     triggering_actor = os.getenv("GITHUB_TRIGGERING_ACTOR")
 
@@ -71,7 +77,7 @@ if __name__ == "__main__":
         )
 
     # Get all tags
-    url = f"{GIT_API_URL}/repos/{ORG}/{args.repo}/tags"
+    url = f"{GIT_API_URL}/repos/{repo}/tags"
     all_rock_tags = get_all_pages(url, headers, {})
     tag_names = list(map(lambda t: t["name"], all_rock_tags))
 

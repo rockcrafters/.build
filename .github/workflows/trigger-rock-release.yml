@@ -91,7 +91,7 @@ jobs:
         continue-on-error: true
         id: checks-release-start
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Releasing ${{ matrix.rock.tag }}
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -170,7 +170,7 @@ jobs:
           ROCK_REPO: ${{ matrix.rock.full_name }}  
           ROCK_VERSION: ${{ matrix.rock.rock_version }}  
           RELEASE_TAG: ${{ matrix.rock.tag }}
-        run: ./oci-re-tag-and-release.sh ${{ steps.get_token.outputs.app_token }}
+        run: ./oci-re-tag-and-release.sh ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           
       ################################
       # -----------------------------------------------------
@@ -180,7 +180,7 @@ jobs:
         if: always()
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           check_id: ${{ steps.checks-release-start.outputs.check_id }}
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}

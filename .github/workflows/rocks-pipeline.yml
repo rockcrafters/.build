@@ -11,7 +11,7 @@ on:
       # Expects a list of combinations, referring to all the ROCKs to be built
       # This value is later on given to a "matrix"
       # The expected format is:
-      #   [{'full_name': <rockcrafters/repo>, 'name': <repo>, 'sha': <commit>, 'branch': <branch>}, ...]
+      #   [{'full_name': <owner/repo>, 'owner': <owner>, 'name': <repo>, 'sha': <commit>, 'branch': <branch>}, ...]
       matrix_combinations:
         required: true
         type: string
@@ -68,7 +68,7 @@ jobs:
         continue-on-error: true
         id: checks-build-start
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Building ROCK on ${{ matrix.rock.branch }}
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -89,7 +89,7 @@ jobs:
         with:
           repository: ${{ matrix.rock.full_name }}
           ref: ${{ matrix.rock.sha }}
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           submodules: "recursive"
           path: ${{ env.ROCK_PROJECT_CHECKOUT_LOCATION }}
       # Get the ROCK CI/CD pipeline scripts
@@ -135,7 +135,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Preflight checks completed
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -164,7 +164,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Revision numbers determined
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -195,7 +195,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: ROCKs builds successful
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -229,7 +229,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Black-box tests successful
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -255,7 +255,7 @@ jobs:
         continue-on-error: true
         if: steps.vulnerability-scanning.outcome == 'success'
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: No High/Critical vulnerabilities
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -284,7 +284,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: No malware detected
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -333,7 +333,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Images published
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -353,7 +353,7 @@ jobs:
         id: git-tags
         run: |
           ${{ env.GITHUB_CI_SCRIPTS_CHECKOUT_LOCATION }}/create-git-tags.sh \
-            ${{ steps.get_token.outputs.app_token }} \
+            ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }} \
             ${{ steps.build-rocks.outputs.marked-for-publishing }} \
             ${{ matrix.rock.branch }} \
             ${{ matrix.rock.full_name }} \
@@ -366,7 +366,7 @@ jobs:
         uses: LouisBrunner/checks-action@v1.1.1
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           name: Git tags created
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -383,7 +383,7 @@ jobs:
         if: always()
         continue-on-error: true
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           check_id: ${{ steps.checks-build-start.outputs.check_id }}
           sha: ${{ matrix.rock.sha }}
           repo: ${{ matrix.rock.full_name }}
@@ -398,8 +398,9 @@ jobs:
         id: announcement-issue
         if: always()
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
-          title: "[${{ job.status }}] rockcrafters build for ${{ matrix.rock.name }}"
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
+          title: "[${{ job.status }}] ROCK build for ${{ matrix.rock.name }}"
+          owner: ${{ matrix.rock.owner }}
           repo: ${{ matrix.rock.name }}
           body: |
             Just finished the CI/CD pipelines for ROCKs project ${{ matrix.rock.name }}.
@@ -424,8 +425,9 @@ jobs:
         if: ${{ success() }}
         uses: maxkomarychev/oction-lock-issue@v0.7.1
         with:
-          token: ${{ steps.get_token.outputs.app_token }}
+          token: ${{ matrix.rock.owner == 'canonical' && secrets.ROCKSBOT_TOKEN || steps.get_token.outputs.app_token }}
           issue_number: ${{ steps.announcement-issue.outputs.number }}
+          owner: ${{ matrix.rock.owner }}
           repo: ${{ matrix.rock.name }}
           lock_reason: resolved
   # notify might be hard, cause we need to get the aggregated status of the matrix job
