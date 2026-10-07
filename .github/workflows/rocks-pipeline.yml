@@ -276,7 +276,7 @@ jobs:
             tar -xf rock.tar -C rock/
             docker rm rock
             rm rock.tar
-            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Malware-Scan.py --filesystem ./rock
+            ${{ env.ROCKS_CICD_CHECKOUT_LOCATION }}/src/rocks/tests/Malware-Scan.py --filesystem ./rock --refresh-database
             rm -fr rock
           done
       # Announce the vulnerability scans were successful
